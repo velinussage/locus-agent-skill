@@ -23,7 +23,7 @@ Locus returns awareness and verification steps, not a verdict. Do not score, ran
 - **National free tools cover all 50 states for geocodable US addresses.** Local lanes are wired jurisdiction by jurisdiction and are growing. Always expect national context. Treat local parcel, zoning, permit, tax, and development-case depth as coverage-dependent.
 - **Start with `locus_place_facts` when lane availability says it is available.** It is the one-call address bundle for supported parcel areas: parcel facts, FEMA flood zone, governing districts, transportation context, and tax context where wired.
 - **Use `locus_lane_availability` before paid calls.** It maps national, local, varies, not-covered, and degraded lanes, then gives per-paid-tool buy recommendations.
-- **Paid tools usually range from about $0.10 to $0.25 USDC per call today.** The live paid catalog and x402 challenge are authoritative for exact price, chain, recipient, and schema.
+- **Do not memorize paid prices from this skill.** Call the live paid catalog or `locus_lane_availability` for current `priceUsdc`, then read the x402 challenge for exact price, chain, recipient, and schema before payment.
 
 ## Quick connect
 
@@ -116,8 +116,8 @@ Trimmed response example for a rural Montana ZIP:
       ]
     },
     "buyRecommendations": [
-      { "slug": "locus-place-report", "priceUsdc": "0.10", "substanceHere": "low", "rationale": "Coverage varies. Confirm the free component lanes first." },
-      { "slug": "locus-environmental-context", "priceUsdc": "0.10", "substanceHere": "medium", "rationale": "Wired national EPA/SDWIS sources resolve here." }
+      { "slug": "locus-place-report", "priceUsdc": "0.05", "substanceHere": "low", "rationale": "Coverage varies. Confirm the free component lanes first." },
+      { "slug": "locus-environmental-context", "priceUsdc": "0.05", "substanceHere": "medium", "rationale": "Wired national EPA/SDWIS sources resolve here." }
     ],
     "warnings": [
       "Not covered does not mean no records exist. It only means Locus has no wired source yet."
@@ -266,7 +266,7 @@ Use the argument key from the tool schema. Do not send every place as `place`; m
 ## Paid report rules
 
 - Unsupported or discovery-only places return a free diagnostic, not a payment challenge.
-- Current paid calls are roughly $0.10 to $0.25 USDC, but live manifests and 402 challenges are authoritative.
+- Do not rely on remembered price ranges. Read `priceUsdc` from `locus_lane_availability` or the paid tool index, then confirm exact cost, network, asset, and recipient from the 402 challenge before payment.
 - The price, network, asset, and recipient appear before payment.
 - Paid results return only after settlement succeeds.
 - Payment metadata binds to the tool and a canonical hash of arguments, not the raw address.
