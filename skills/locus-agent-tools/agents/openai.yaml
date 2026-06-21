@@ -1,0 +1,4 @@
+interface:
+  display_name: "Locus Agent Tools"
+  short_description: "Use Locus MCP, free tools, and paid x402 property-context APIs."
+  default_prompt: "Use Locus to discover current property-context tools, check free coverage, and call the smallest cited tool for the user goal."
