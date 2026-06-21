@@ -65,7 +65,7 @@ npx skills use velinussage/locus-agent-skill --skill locus-agent-tools
 
 ## What the skill teaches agents
 
-- 19 national free tools work for any geocodable US address.
+- 23+ national free tools work for geocodable US addresses, with 50 free tools total in the live catalog.
 - `locus_place_facts` is the best first call when supported.
 - `locus_lane_availability` shows national, local, varies, not-covered, and degraded lanes before payment.
 - Free tools stay read-only and cited.

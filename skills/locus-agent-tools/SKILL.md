@@ -19,11 +19,11 @@ Locus returns awareness and verification steps, not a verdict. Do not score, ran
 
 ## What to remember first
 
-- **19 national tools work for any US address, for free, with no payment or coverage check needed.** Use them for rural addresses too, including flood zone, flood gauges, FEMA events, NOAA storms, radon, wildfire risk, cleanup sites, toxic releases, water systems, representatives, governing districts, fair-market rents, nearby places, ordinance leads, and data-center/source-discovery prompts.
+- **23+ national free tools work for geocodable US addresses, with no payment or local coverage check needed.** The live free catalog currently exposes 50 tools total. Use national lanes for rural addresses too, including flood zone, flood gauges, FEMA events, NOAA storms, radon, wildfire risk, cleanup sites, toxic releases, water systems, representatives, governing districts, fair-market rents, opportunity zones, seismic design, unemployment, house-price index context, nearby places, ordinance leads, and data-center/source-discovery prompts.
 - **National free tools cover all 50 states for geocodable US addresses.** Local lanes are wired jurisdiction by jurisdiction and are growing. Always expect national context. Treat local parcel, zoning, permit, tax, and development-case depth as coverage-dependent.
 - **Start with `locus_place_facts` when lane availability says it is available.** It is the one-call address bundle for supported parcel areas: parcel facts, FEMA flood zone, governing districts, transportation context, and tax context where wired.
 - **Use `locus_lane_availability` before paid calls.** It maps national, local, varies, not-covered, and degraded lanes, then gives per-paid-tool buy recommendations.
-- **Do not memorize paid prices from this skill.** Call the live paid catalog or `locus_lane_availability` for current `priceUsdc`, then read the x402 challenge for exact price, chain, recipient, and schema before payment.
+- **Paid tools currently list at $0.05 to $0.07 USDC per call.** Call the live paid catalog or `locus_lane_availability` for current `priceUsdc`, then read the x402 challenge for exact price, chain, recipient, and schema before payment.
 
 ## Quick connect
 
@@ -153,7 +153,7 @@ Use the exact JSON shapes below as safe defaults. If a tool also accepts `latitu
 | Parcel facts only | `locus_parcel_lookup` | `{ "address": "123 Oak Park Dr, Cary, NC 27519" }` | PII-safe parcel or place facts such as land use, acreage, year built where present, derived county/municipality, provenance. |
 | Multiple caller-supplied parcels | `locus_parcel_set` | `{ "addresses": ["addr 1", "addr 2"] }` | Normalized facts for up to 25 supplied addresses in an assemblage. |
 
-### 19 national free content tools
+### 23 national free content tools
 
 These work for geocodable US addresses at no cost. Some accept address directly. Others need county, state, ZIP, or FIPS. Use `locus_lane_availability` or any geocoder/FIPS resolver to derive those arguments when needed.
 
@@ -174,6 +174,10 @@ These work for geocodable US addresses at no cost. Some accept address directly.
 | NOAA storm events | `locus_storm_events` | `{ "stateFips": "30", "countyName": "Park", "countyFips3": "067" }` | NOAA Storm Events history, event type, dates, damage estimates, narratives, and source links. Use `stateFips`, not `state`. |
 | FEMA disaster and NFIP history | `locus_fema_events` | `{ "address": "..." }` or `{ "state": "MT", "countyFips3": "067", "zip": "59047" }` | FEMA disaster declarations by county, NFIP claims by ZIP, preliminary FIRM panel context where available. |
 | HUD fair-market rents | `locus_fair_market_rents` | `{ "stateFips": "30", "countyFips3": "067", "year": 2026 }` | HUD FMR values by bedroom count and county/FIPS basis. |
+| Qualified Opportunity Zone | `locus_opportunity_zone` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Whether the point is in a Treasury/IRS Qualified Opportunity Zone tract, cited to HUD. Not tax or investment advice. |
+| Seismic design parameters | `locus_seismic_design` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | USGS NEHRP/ASCE 7 seismic design parameters for a point. Hazard data only, not a safety verdict. |
+| County unemployment trend | `locus_unemployment` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Recent BLS LAUS county unemployment trend. Reported statistic only, not an area-quality label. |
+| State house-price index | `locus_house_price_index` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Latest state-level FHFA All-Transactions House Price Index and year-over-year change via FRED. Not an appraisal or value estimate. |
 | Nearby places and amenities | `locus_nearby_places` | `{ "address": "...", "radiusMeters": 800 }` | OpenStreetMap nearby amenities/places with categories, distance, and OSM provenance. |
 | Data-center or large-development watch prompts | `locus_data_center_watch` | `{ "address": "..." }` or `{ "state": "NC", "county": "Wake County", "municipality": "Raleigh" }` | Bounded official-source query pack and watch leads for large projects, data centers, utility/water/planning sources. |
 | Local ordinance leads | `locus_ordinance_leads` | `{ "address": "...", "topics": ["short_term_rental", "adu"] }` or `{ "place": "Raleigh, NC" }` | Jurisdiction-locked official-source query pack for ordinance research. Leads only, not legal advice. |
@@ -266,7 +270,7 @@ Use the argument key from the tool schema. Do not send every place as `place`; m
 ## Paid report rules
 
 - Unsupported or discovery-only places return a free diagnostic, not a payment challenge.
-- Do not rely on remembered price ranges. Read `priceUsdc` from `locus_lane_availability` or the paid tool index, then confirm exact cost, network, asset, and recipient from the 402 challenge before payment.
+- Current paid tools list between $0.05 and $0.07 USDC per call. Read `priceUsdc` from `locus_lane_availability` or the paid tool index, then confirm exact cost, network, asset, and recipient from the 402 challenge before payment.
 - The price, network, asset, and recipient appear before payment.
 - Paid results return only after settlement succeeds.
 - Payment metadata binds to the tool and a canonical hash of arguments, not the raw address.
