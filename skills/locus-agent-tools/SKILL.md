@@ -198,7 +198,7 @@ Temporarily degraded national tools may appear in `lanes.degraded`, such as `loc
 | Recent nearby parcel transfers | `locus_parcel_transfers` | `{ "address": "...", "radiusMeters": 1500, "monthsBack": 12 }` | Recorded sales/transfers near the point where parcel-sale sources are wired. |
 | Property-tax rates | `locus_property_tax_rates` | `{ "place": "Wake County, NC" }` | Adopted rate components and jurisdiction basis where wired. |
 | Property-tax estimate | `locus_property_tax_estimate` | `{ "address": "..." }` | Estimated annual property tax from assessed value and rates where wired. Not a valuation. |
-| Tax calendar | `locus_tax_calendar` | `{ "county": "Wake" }` | Appeal/payment/revaluation calendar for supported counties. |
+| Tax calendar | `locus_tax_calendar` | `{ "county": "Harris County, TX" }` or `{ "address": "..." }` | State property-tax statutory framework (cited to the state tax code) for NC, TX, CA, FL, NY, plus the official county source pointer and a current-year live-lookup prompt for the volatile per-cycle dates; verified prior-cycle county dates where curated (NC). |
 | Area reported-crime context | `locus_area_incidents` | `{ "address": "...", "radiusMeters": 1000, "lookbackDays": 365 }` | Area-level or citywide reported-incident context where wired, plus caveats. No safety verdict. |
 | Local legislation preview | `locus_local_legislation` | `{ "address": "..." }` | Recent property-relevant legislation preview, status labels, source attribution. Not legal advice. |
 | Dated changes around one place | `locus_ownership_loop` | `{ "address": "...", "radiusMeters": 1500, "state": "NC", "countyFips3": "183", "zip": "27601" }` | Composite dated-change bundle across available ownership, tax, flood, transfer, and local lanes. |
