@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.3.0
+version: 1.3.1
 description: Use when an agent needs to connect to Locus over MCP, A2A, or REST for property and local-government context.
 triggers:
   - locus agent tools
@@ -19,11 +19,12 @@ Locus returns awareness and verification steps, not a verdict. Do not score, ran
 
 ## What to remember first
 
-- **23+ national free tools work for geocodable US addresses, with no payment or local coverage check needed.** The live free catalog currently exposes 50 tools total. Use national lanes for rural addresses too, including flood zone, flood gauges, FEMA events, NOAA storms, radon, wildfire risk, cleanup sites, toxic releases, water systems, representatives, governing districts, fair-market rents, opportunity zones, seismic design, unemployment, house-price index context, nearby places, ordinance leads, and data-center/source-discovery prompts.
+- **23+ national free tools work for geocodable US addresses, with no payment or local coverage check needed.** The live free catalog currently exposes 51 tools total. Use national lanes for rural addresses too, including flood zone, flood gauges, FEMA events, NOAA storms, radon, wildfire risk, cleanup sites, toxic releases, water systems, representatives, governing districts, fair-market rents, opportunity zones, seismic design, unemployment, house-price index context, nearby places, ordinance leads, and data-center/source-discovery prompts.
 - **National free tools cover all 50 states for geocodable US addresses.** Local lanes are wired jurisdiction by jurisdiction and are growing. Always expect national context. Treat local parcel, zoning, permit, tax, and development-case depth as coverage-dependent.
 - **Start with `locus_place_facts` when lane availability says it is available.** It is the one-call address bundle for supported parcel areas: parcel facts, FEMA flood zone, governing districts, transportation context, and tax context where wired.
 - **Use `locus_lane_availability` before paid calls.** It maps national, local, varies, not-covered, and degraded lanes, then gives per-paid-tool buy recommendations.
-- **Paid tools currently list at $0.05 to $0.07 USDC per call.** Call the live paid catalog or `locus_lane_availability` for current `priceUsdc`, then read the x402 challenge for exact price, chain, recipient, and schema before payment.
+- **Treat partial trend coverage as a check-first signal.** `supported_partial` trend places appear in `lanes.varies` with low paid substance; buy `locus-local-trend-brief` only when `buyRecommendations[].substanceHere` is `medium` or better. Thin exact-radius results can return a `charged:false` data-sufficiency diagnostic instead of a paid brief.
+- **Most paid single-call tools list at $0.05 to $0.07 USDC; `locus-property-tax` is $0.49 USDC because it uses a paid residential tax upstream, and `locus-place-report-batch` is $0.25 USDC per 10-50 address async job.** Call the live paid catalog or `locus_lane_availability` for current `priceUsdc`, then read the x402 challenge for exact price, chain, recipient, and schema before payment.
 
 ## Quick connect
 
@@ -111,9 +112,7 @@ Trimmed response example for a rural Montana ZIP:
       "notCovered": [
         { "tool": "locus_place_facts", "access": "free", "why": "needs a wired parcel backbone", "requestTool": "locus_request_coverage" }
       ],
-      "degraded": [
-        { "tool": "locus_housing_stock", "access": "free", "why": "upstream Census geocoder is failing" }
-      ]
+      "degraded": []
     },
     "buyRecommendations": [
       { "slug": "locus-place-report", "priceUsdc": "0.05", "substanceHere": "low", "rationale": "Coverage varies. Confirm the free component lanes first." },
@@ -145,6 +144,20 @@ Use the exact JSON shapes below as safe defaults. If a tool also accepts `latitu
 | What policy sources govern here? | `locus_policy_sources` | `{ "place": "Raleigh, NC" }` | State, county, city policy-source list, legal geographies, source links. |
 | Read aggregate coverage demand | `locus_coverage_demand` | `{}` | Aggregate requested-coverage demand, not place records. |
 
+### Paid tools by endpoint
+
+Use these only after `locus_lane_availability` or the paid index says the call has substance for the exact place. The live paid index is authoritative for current prices and schemas.
+
+| Endpoint | Price | Use when | Free diagnostic behavior |
+|---|---:|---|---|
+| `POST /api/locus-place-report` | `$0.05` | Agent needs one compiled cited property-context artifact for an address or ZIP. | Unsupported or discovery-only places return no-charge diagnostics. |
+| `POST /api/locus-place-report-batch` | `$0.25` | Agent has a 10-50 address portfolio and wants one async job plus one settlement. | If all items are unsupported or discovery-only, no charge. Unsupported items inside a paid job remain item-level diagnostics. |
+| `POST /api/locus-local-trend-brief` | `$0.05` | Agent needs permit, 311, or code-case local-change series where the registry has enough source coverage. | Unsupported, discovery-only, or insufficient-data places return `charged:false` diagnostics. |
+| `POST /api/locus-local-policy-brief` | `$0.07` | Agent needs property-relevant bills, agendas, ordinances, tax, fee, bond, housing, or permit-change policy context. | Unsupported places return no-charge diagnostics. |
+| `POST /api/locus-before-you-sign` | `$0.07` | Agent needs a pre-decision bundle over parcel, trend, and policy components for one street address. | Weak component readiness returns no-charge component diagnostics. |
+| `POST /api/locus-environmental-context` | `$0.05` | Agent needs address-level EPA TRI/RCRA/SDWIS/radon public-record context ranked by distance where possible. | Unsupported or unresolvable inputs return no-charge diagnostics. |
+| `POST /api/locus-property-tax` | `$0.49` | Agent needs a residential US property-tax artifact with assessed value, annual tax, tax history, effective rate, and provenance. | Commercial, uncovered, or unresolvable addresses return `charged:false` diagnostics pointing to the free `.gov` tax lanes or place report. |
+
 ### Best first call for supported address context
 
 | The question | Tool | Exact arguments | What it returns |
@@ -164,7 +177,7 @@ These work for geocodable US addresses at no cost. Some accept address directly.
 | Governing districts | `locus_governing_districts` | `{ "address": "..." }` | Congressional, state senate, state house, county, municipality, and other governing geographies when resolved. |
 | Representatives | `locus_representatives` | `{ "address": "..." }` | Cited federal and state officials for the address, districts, party/office/contact links where available. |
 | Wildfire risk | `locus_wildfire_risk` | `{ "address": "..." }` | FEMA NRI tract-level wildfire rating, score, expected annual loss fields where returned, provenance, caveats. |
-| Environmental history bundle | `locus_environmental_history` | `{ "address": "..." }` or `{ "state": "MT", "county": "Park County" }` | EPA TRI, RCRA, SDWIS water systems, radon zone, and event-history verify links. |
+| Environmental history bundle | `locus_environmental_history` | `{ "address": "..." }` or `{ "state": "MT", "county": "Park County" }` | EPA TRI, RCRA, SDWIS water systems, radon zone, and event-history verify links. Read `radonHeadline` and `addressProximity` first; `countyBackground` and legacy county fields are broad context only. |
 | Cleanup sites | `locus_cleanup_sites` | `{ "address": "...", "radiusMeters": 5000 }` | EPA Superfund, NPL, brownfield, or cleanup-site records nearby with program/status fields and official profile links. |
 | Toxic releases | `locus_toxic_releases` | `{ "state": "MT", "county": "Park County" }` | EPA TRI facilities for the county, chemical-release reporting fields where available, profile links. |
 | RCRA hazardous-waste handlers | `locus_rcra_handlers` | `{ "state": "MT", "countyFips3": "067" }` or `{ "state": "MT", "zip": "59047" }` | RCRAInfo handlers, generator status/activity fields, coordinates, ECHO verify links. |
@@ -174,16 +187,16 @@ These work for geocodable US addresses at no cost. Some accept address directly.
 | NOAA storm events | `locus_storm_events` | `{ "stateFips": "30", "countyName": "Park", "countyFips3": "067" }` | NOAA Storm Events history, event type, dates, damage estimates, narratives, and source links. Use `stateFips`, not `state`. |
 | FEMA disaster and NFIP history | `locus_fema_events` | `{ "address": "..." }` or `{ "state": "MT", "countyFips3": "067", "zip": "59047" }` | FEMA disaster declarations by county, NFIP claims by ZIP, preliminary FIRM panel context where available. |
 | HUD fair-market rents | `locus_fair_market_rents` | `{ "stateFips": "30", "countyFips3": "067", "year": 2026 }` | HUD FMR values by bedroom count and county/FIPS basis. |
-| Qualified Opportunity Zone | `locus_opportunity_zone` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Whether the point is in a Treasury/IRS Qualified Opportunity Zone tract, cited to HUD. Not tax or investment advice. |
+| Qualified Opportunity Zone | `locus_opportunity_zone` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Whether the point is in a Treasury/IRS Qualified Opportunity Zone tract, cited to HUD. A `not_designated` zero-hit is a valid designation answer, not a coverage failure. Not tax or investment advice. |
 | Seismic design parameters | `locus_seismic_design` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | USGS NEHRP/ASCE 7 seismic design parameters for a point. Hazard data only, not a safety verdict. |
 | County unemployment trend | `locus_unemployment` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Recent BLS LAUS county unemployment trend. Reported statistic only, not an area-quality label. |
 | State house-price index | `locus_house_price_index` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Latest state-level FHFA All-Transactions House Price Index and year-over-year change via FRED. Not an appraisal or value estimate. |
 | Nearby places and amenities | `locus_nearby_places` | `{ "address": "...", "radiusMeters": 800 }` | OpenStreetMap nearby amenities/places with categories, distance, and OSM provenance. |
-| Data-center or large-development watch prompts | `locus_data_center_watch` | `{ "address": "..." }` or `{ "state": "NC", "county": "Wake County", "municipality": "Raleigh" }` | Bounded official-source query pack and watch leads for large projects, data centers, utility/water/planning sources. |
+| Data-center or large-development watch prompts | `locus_data_center_watch` | `{ "address": "..." }` or `{ "state": "NC", "county": "Wake County", "municipality": "Raleigh" }` | Bounded official-source query pack and lead-discovery prompts for large projects, data centers, utility/water/planning sources. |
 | Local ordinance leads | `locus_ordinance_leads` | `{ "address": "...", "topics": ["short_term_rental", "adu"] }` or `{ "place": "Raleigh, NC" }` | Jurisdiction-locked official-source query pack for ordinance research. Leads only, not legal advice. |
 | Coastal county catalog | `locus_coastal_county_catalog` | `{}` or `{ "county": "new-hanover-nc" }` | Catalog of supported coastal source packs, overlays, source leads, and limitations. |
 
-Temporarily degraded national tools may appear in `lanes.degraded`, such as `locus_regulated_facility_compliance` or `locus_housing_stock`. If degraded, use the suggested fallback from lane availability.
+Temporarily degraded national tools may appear in `lanes.degraded` when an upstream source is failing for every point. If `locus_regulated_facility_compliance` appears there during a future EPA ECHO outage, use `locus_environmental_history` and `locus_toxic_releases` as the functional fallback; if `locus_housing_stock` appears there during a future Census outage, use `locus_fair_market_rents` for housing-cost context meanwhile. Otherwise those tools are callable national lanes.
 
 ### Local or coverage-dependent free tools
 
@@ -196,15 +209,16 @@ Temporarily degraded national tools may appear in `lanes.degraded`, such as `loc
 | Transportation projects and traffic counts | `locus_transportation_context` | `{ "address": "...", "radiusMeters": 2000 }` | State DOT funded projects, traffic-count stations, routes, statuses where wired. |
 | Transit stops and routes | `locus_transit_context` | `{ "address": "...", "radiusMeters": 400 }` | Transit stops, routes, shelter/ADA fields, headways where supported. |
 | Recent nearby parcel transfers | `locus_parcel_transfers` | `{ "address": "...", "radiusMeters": 1500, "monthsBack": 12 }` | Recorded sales/transfers near the point where parcel-sale sources are wired. |
-| Property-tax rates | `locus_property_tax_rates` | `{ "place": "Wake County, NC" }` | Adopted rate components and jurisdiction basis where wired. |
-| Property-tax estimate | `locus_property_tax_estimate` | `{ "address": "..." }` | Estimated annual property tax from assessed value and rates where wired. Not a valuation. |
+| Property-tax rates | `locus_property_tax_rates` | `{ "place": "Wake County, NC" }`, `{ "place": "Nashville, TN" }`, `{ "place": "Austin, TX" }`, or `{ "place": "Tampa, FL" }` | Adopted rate components and jurisdiction basis from official tables where wired: NC statewide plus selected Nashville/Davidson TN, Austin/Travis TX, and Tampa/Hillsborough FL adapters. Other jurisdictions return an official-source prompt pack, not a server-emitted rate number. |
+| Property-tax estimate | `locus_property_tax_estimate` | `{ "address": "..." }` | Estimated annual property tax from assessed value and NC rates where wired. Computed estimates are NC-only; out-of-NC addresses fail closed and may return official-source prompt guidance. Not a valuation. |
+| Paid residential property-tax report | `locus-property-tax` | `POST https://api.locus.report/api/locus-property-tax` with `{ "address": "600 E 4th St, Charlotte, NC" }` | x402-paid residential property-tax artifact: assessed value, annual tax, tax history, effective rate, and provenance from RentCast aggregator records. Commercial or uncovered addresses return `charged:false` diagnostics. Not an official tax bill or valuation. |
 | Tax calendar | `locus_tax_calendar` | `{ "county": "Harris County, TX" }` or `{ "address": "..." }` | State property-tax statutory framework (cited to the state tax code) for NC, TX, CA, FL, NY, plus the official county source pointer and a current-year live-lookup prompt for the volatile per-cycle dates; verified prior-cycle county dates where curated (NC). |
 | Area reported-crime context | `locus_area_incidents` | `{ "address": "...", "radiusMeters": 1000, "lookbackDays": 365 }` | Area-level or citywide reported-incident context where wired, plus caveats. No safety verdict. |
 | Local legislation preview | `locus_local_legislation` | `{ "address": "..." }` | Recent property-relevant legislation preview, status labels, source attribution. Not legal advice. |
 | Dated changes around one place | `locus_ownership_loop` | `{ "address": "...", "radiusMeters": 1500, "state": "NC", "countyFips3": "183", "zip": "27601" }` | Composite dated-change bundle across available ownership, tax, flood, transfer, and local lanes. |
 | Coastal overlays | `locus_coastal_county_overlays` | `{ "address": "..." }` or `{ "latitude": 34.22, "longitude": -77.88, "county": "auto" }` | Coastal hazard overlays, parcel/address facts, zoning/flood/wetland/resiliency context for supported coastal counties. |
 | ACS housing stock | `locus_housing_stock` | `{ "address": "..." }` | Census tract housing units, tenure, median rent/value, year built when upstream is healthy. |
-| EPA facility compliance | `locus_regulated_facility_compliance` | `{ "address": "...", "radiusMeters": 5000 }` | EPA ECHO facility compliance and inspection/enforcement summary when upstream is healthy. |
+| EPA facility compliance | `locus_regulated_facility_compliance` | `{ "address": "...", "radiusMeters": 5000 }` | EPA ECHO facility compliance and inspection/enforcement summary when upstream is healthy. If lane availability lists it as degraded, use the fallback tools instead. |
 
 ## Worked example: address to free tools to answer
 
@@ -270,7 +284,7 @@ Use the argument key from the tool schema. Do not send every place as `place`; m
 ## Paid report rules
 
 - Unsupported or discovery-only places return a free diagnostic, not a payment challenge.
-- Current paid tools list between $0.05 and $0.07 USDC per call. Read `priceUsdc` from `locus_lane_availability` or the paid tool index, then confirm exact cost, network, asset, and recipient from the 402 challenge before payment.
+- Most paid single-call tools list between $0.05 and $0.07 USDC; `locus-property-tax` is $0.49 USDC because it uses a paid residential tax upstream, and `locus-place-report-batch` is $0.25 USDC per 10-50 address async job. Read `priceUsdc` from `locus_lane_availability` or the paid tool index, then confirm exact cost, network, asset, and recipient from the 402 challenge before payment.
 - The price, network, asset, and recipient appear before payment.
 - Paid results return only after settlement succeeds.
 - Payment metadata binds to the tool and a canonical hash of arguments, not the raw address.
@@ -278,7 +292,7 @@ Use the argument key from the tool schema. Do not send every place as `place`; m
 
 ## x402 payment flow
 
-The compiled paid tools (`locus-place-report`, `locus-local-trend-brief`, `locus-local-policy-brief`, `locus-before-you-sign`, `locus-environmental-context`) are gated with x402 micropayments in USDC on Base. The flow is identical over REST, MCP, and A2A:
+The compiled paid tools (`locus-place-report`, `locus-place-report-batch`, `locus-local-trend-brief`, `locus-local-policy-brief`, `locus-before-you-sign`, `locus-environmental-context`, `locus-property-tax`) are gated with x402 micropayments in USDC on Base. The flow is identical over REST, MCP, and A2A:
 
 1. Call the paid tool without payment: `POST https://api.locus.report/api/<tool-slug>` over REST, `locus_execute` over MCP, or `/a2a/v1/message:send` over A2A. The free `/tools/call` facade is never paid.
 2. A covered place returns **HTTP 402** with `{ "x402Version": 2, "accepts": [{ "scheme": "exact", "network", "maxAmountRequired", "payTo", "asset", "extra": { "assetTransferMethod": "eip3009" } }] }`. Read live values from the challenge.
