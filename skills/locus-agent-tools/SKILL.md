@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.3.1
+version: 1.7.0
 description: Use when an agent needs to connect to Locus over MCP, A2A, or REST for property and local-government context.
 triggers:
   - locus agent tools
@@ -19,7 +19,7 @@ Locus returns awareness and verification steps, not a verdict. Do not score, ran
 
 ## What to remember first
 
-- **23+ national free tools work for geocodable US addresses, with no payment or local coverage check needed.** The live free catalog currently exposes 51 tools total. Use national lanes for rural addresses too, including flood zone, flood gauges, FEMA events, NOAA storms, radon, wildfire risk, cleanup sites, toxic releases, water systems, representatives, governing districts, fair-market rents, opportunity zones, seismic design, unemployment, house-price index context, nearby places, ordinance leads, and data-center/source-discovery prompts.
+- **27+ national free tools work for geocodable US addresses, with no payment or local coverage check needed.** The live free catalog currently exposes 55 tools total. Use national lanes for rural addresses too, including flood zone, flood gauges, FEMA events, NFIP flood-insurance claims, NOAA storms, radon, wildfire risk, historical wildfire perimeters, USDA soil context (septic/foundation/drainage), cleanup sites, toxic releases, water systems, representatives, governing districts, fair-market rents, opportunity zones, seismic design, unemployment, house-price index context, nearby places, nearest emergency services/utilities, ordinance leads, and data-center/source-discovery prompts.
 - **National free tools cover all 50 states for geocodable US addresses.** Local lanes are wired jurisdiction by jurisdiction and are growing. Always expect national context. Treat local parcel, zoning, permit, tax, and development-case depth as coverage-dependent.
 - **Start with `locus_place_facts` when lane availability says it is available.** It is the one-call address bundle for supported parcel areas: parcel facts, FEMA flood zone, governing districts, transportation context, and tax context where wired.
 - **Use `locus_lane_availability` before paid calls.** It maps national, local, varies, not-covered, and degraded lanes, then gives per-paid-tool buy recommendations.
@@ -63,14 +63,24 @@ The live catalogs are authoritative for tool names, schemas, prices, and endpoin
 - **`locus_lane_availability { "place": "..." }`** is the per-address capability map. It returns which exact tools are national, local, varies, not covered, or degraded, plus buy signals for paid tools. Call this before address-specific local lanes and before paying.
 - **`locus_coverage_map {}`** returns the whole registry view. Use it when an agent needs breadth, not one address.
 
+## Exact-place and paid-call guardrails
+
+- **Use the exact user string first.** Do not append a city, county, ZIP, or better-covered market unless the user provided it or confirms it.
+- **Never substitute a richer-coverage jurisdiction.** If `17 E Camden` resolves to Chatham County but `17 E Camden St, Raleigh, NC` has richer civic lanes, the answer stays Chatham/parcel-only until the user confirms Raleigh.
+- **Trust exact parcel/place resolution over coverage richness.** Coverage tells you which lanes are available for a resolved place; it does not license geocoding toward another jurisdiction.
+- **Ask before paid calls when jurisdiction is ambiguous.** If candidate variants resolve to different counties/cities, stop and ask the user to confirm the intended jurisdiction.
+- **First line of every report:** `Resolved as: <displayName> (<jurisdictionId>) via <resolution>; parcel status: <parcelStatus>; civic lane status: <civicLaneStatus/coverageStatus>.`
+- **Parcel-only mode:** if civic lanes are unsupported but parcel facts are verified/available, use parcel, zoning-if-available, tax-rate/district, parcel-transfer, tax-distress, nearby-places, national hazard/environmental, and verify-next tools. Do not lead with service requests or generic place-report counts, and do not treat missing civic lanes as "no activity."
+
 ## Workflow
 
 1. **Discover tools.** Use the table below for common intents. The live catalog, `locus_search_tools` over MCP or `GET /tools/list` over REST, is authoritative for the full current set and exact schemas.
-2. **For a broad address question, call `locus_place_facts` first if available.** It often replaces several separate calls. If lane availability marks it not covered, fall back to national free tools.
-3. **For local depth, check availability for the exact place.** Call `locus_lane_availability { "place": "<ZIP or address>" }`, then call only the lanes it marks `available`. For `varies`, call the free tool once and let its returned coverage/status decide.
-4. **Run the smallest tool by intent.** Use `locus_execute` over MCP, `/a2a/v1/message:send` with a DataPart over A2A, or `POST /tools/call` over free REST. Prefer one targeted free tool over a paid bundle when the question is narrow.
-5. **Ground every fact.** Answer only from returned artifacts. Include source names, links or locators, fetched timestamps where present, and caveats.
-6. **Pay only on explicit authorization.** A paid tool returns an x402 challenge. Show price, chain, recipient, and tool, then retry only after the user approves.
+2. **Resolve the exact place first.** Call `locus_coverage_check` and `locus_lane_availability` with the exact user string. Compare the resolved jurisdiction to any user-supplied city/county/state.
+3. **For a broad address question, call `locus_place_facts` first if available.** It often replaces several separate calls. If lane availability marks it not covered, fall back to national free tools or parcel-only mode.
+4. **For local depth, check availability for the exact place.** Call only the lanes it marks `available`. For `varies`, call the free tool once and let its returned coverage/status decide.
+5. **Run the smallest tool by intent.** Use `locus_execute` over MCP, `/a2a/v1/message:send` with a DataPart over A2A, or `POST /tools/call` over free REST. Prefer one targeted free tool over a paid bundle when the question is narrow.
+6. **Ground every fact.** Answer only from returned artifacts. Include source names, links or locators, fetched timestamps where present, and caveats.
+7. **Pay only on explicit authorization.** A paid tool returns an x402 challenge. Show price, chain, recipient, and tool, then retry only after the user approves.
 
 ## Reading `locus_lane_availability`
 
@@ -150,7 +160,7 @@ Use these only after `locus_lane_availability` or the paid index says the call h
 
 | Endpoint | Price | Use when | Free diagnostic behavior |
 |---|---:|---|---|
-| `POST /api/locus-place-report` | `$0.05` | Agent needs one compiled cited property-context artifact for an address or ZIP. | Unsupported or discovery-only places return no-charge diagnostics. |
+| `POST /api/locus-place-report` | `$0.05` | Agent needs one compiled cited property-context artifact for an address or ZIP. The artifact confirms the matched subject, lists every source, and carries an honest coverage ledger of which lanes were checked (covered, empty, or not wired) plus a machine-readable `report.index`/`access` envelope. | Unsupported or discovery-only places return no-charge diagnostics. |
 | `POST /api/locus-place-report-batch` | `$0.25` | Agent has a 10-50 address portfolio and wants one async job plus one settlement. | If all items are unsupported or discovery-only, no charge. Unsupported items inside a paid job remain item-level diagnostics. |
 | `POST /api/locus-local-trend-brief` | `$0.05` | Agent needs permit, 311, or code-case local-change series where the registry has enough source coverage. | Unsupported, discovery-only, or insufficient-data places return `charged:false` diagnostics. |
 | `POST /api/locus-local-policy-brief` | `$0.07` | Agent needs property-relevant bills, agendas, ordinances, tax, fee, bond, housing, or permit-change policy context. | Unsupported places return no-charge diagnostics. |
@@ -166,7 +176,7 @@ Use these only after `locus_lane_availability` or the paid index says the call h
 | Parcel facts only | `locus_parcel_lookup` | `{ "address": "123 Oak Park Dr, Cary, NC 27519" }` | PII-safe parcel or place facts such as land use, acreage, year built where present, derived county/municipality, provenance. |
 | Multiple caller-supplied parcels | `locus_parcel_set` | `{ "addresses": ["addr 1", "addr 2"] }` | Normalized facts for up to 25 supplied addresses in an assemblage. |
 
-### 23 national free content tools
+### 27 national free content tools
 
 These work for geocodable US addresses at no cost. Some accept address directly. Others need county, state, ZIP, or FIPS. Use `locus_lane_availability` or any geocoder/FIPS resolver to derive those arguments when needed.
 
@@ -192,6 +202,10 @@ These work for geocodable US addresses at no cost. Some accept address directly.
 | County unemployment trend | `locus_unemployment` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Recent BLS LAUS county unemployment trend. Reported statistic only, not an area-quality label. |
 | State house-price index | `locus_house_price_index` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Latest state-level FHFA All-Transactions House Price Index and year-over-year change via FRED. Not an appraisal or value estimate. |
 | Nearby places and amenities | `locus_nearby_places` | `{ "address": "...", "radiusMeters": 800 }` | OpenStreetMap nearby amenities/places with categories, distance, and OSM provenance. |
+| Nearest emergency services and utilities | `locus_public_utilities` | `{ "address": "...", "radiusMeters": 5000 }` | Nearest mapped OpenStreetMap fire station, hospital/clinic, police, fire hydrant, electric substation, and water tower with straight-line distances and counts. Hydrants/infrastructure are often unnamed and still reported. Mapped facility distances only, never a fire-protection rating, insurance determination, or safety verdict. |
+| FEMA NFIP flood-insurance claims (county) | `locus_nfip_claims` | `{ "address": "..." }` or `{ "latitude": 25.76, "longitude": -80.19 }` | FEMA OpenFEMA NFIP redacted flood-insurance claims aggregated to the county: total claim count, total paid, year range, and top rated flood zones. Redacted (no address/PII), county-level historical fact, never a prediction or risk score. |
+| Historical wildfire perimeters | `locus_wildfire_history` | `{ "address": "..." }` or `{ "latitude": 38.6, "longitude": -122.5 }` | WFIGS interagency historical wildfire perimeters within about 5 miles: incident name, category, acres, discovery year. Realized-event records (complements the modeled `locus_wildfire_risk`); most non-Western points return none, an honest `out_of_coverage`. |
+| Soil context and site constraints | `locus_soil_context` | `{ "address": "..." }` or `{ "latitude": 35.9, "longitude": -78.9 }` | USDA NRCS SSURGO soil suitability at a point: NRCS engineering ratings (Very/Somewhat/Not limited, with limiting features) for dwellings, septic absorption fields, and shallow excavations, plus drainage, hydric, slope, shrink-swell (linear extensibility), taxonomic order, and farmland class. Soil-map-unit-level screening context for septic/foundation/drainage/buildability, never a geotechnical, perc-test, permit, or safe/unsafe/buildable verdict. Developed/urban points often return `out_of_coverage` (no soil component). |
 | Data-center or large-development watch prompts | `locus_data_center_watch` | `{ "address": "..." }` or `{ "state": "NC", "county": "Wake County", "municipality": "Raleigh" }` | Bounded official-source query pack and lead-discovery prompts for large projects, data centers, utility/water/planning sources. |
 | Local ordinance leads | `locus_ordinance_leads` | `{ "address": "...", "topics": ["short_term_rental", "adu"] }` or `{ "place": "Raleigh, NC" }` | Jurisdiction-locked official-source query pack for ordinance research. Leads only, not legal advice. |
 | Coastal county catalog | `locus_coastal_county_catalog` | `{}` or `{ "county": "new-hanover-nc" }` | Catalog of supported coastal source packs, overlays, source leads, and limitations. |
@@ -205,9 +219,9 @@ Temporarily degraded national tools may appear in `lanes.degraded` when an upstr
 | Zoning district and overlays | `locus_zoning` | `{ "address": "..." }` or `{ "latitude": 35.78, "longitude": -78.64 }` | Governing zoning district, overlays/planning context where wired, source links. Rich coverage only in wired jurisdictions. |
 | Development or rezoning nearby | `locus_development_cases` | `{ "address": "...", "radiusMeters": 1500 }` | Nearby development/rezoning case records, statuses, dates, identifiers, citations where wired. |
 | Public capital projects nearby | `locus_capital_projects` | `{ "address": "...", "radiusMeters": 1609 }` | Government capital projects, public works, assessments where wired, with project ids and source links. |
-| Building permits in supported metros | `locus_metro_permits` | `{ "city": "chicago", "latitude": 41.878, "longitude": -87.629, "radiusMeters": 1000, "sinceDate": "2025-01-01" }` | Nearby issued permit records, permit number/type/status, issue date, reported cost, source URL. |
+| Building permits in supported metros | `locus_metro_permits` | `{ "city": "chicago", "latitude": 41.878, "longitude": -87.629, "radiusMeters": 1000, "sinceDate": "2025-01-01" }` | Nearby issued permit records, permit number/type/status, issue date, reported cost, source URL. Wired verified metros: Chicago, Austin, Seattle, San Francisco, Los Angeles, New York, Mesa, Miami (City of Miami only), Nashville, Washington DC, San Antonio, Phoenix, Denver, Fort Worth, Buffalo, and Detroit. Other metros return an out-of-coverage diagnostic, not a silent empty. |
 | Transportation projects and traffic counts | `locus_transportation_context` | `{ "address": "...", "radiusMeters": 2000 }` | State DOT funded projects, traffic-count stations, routes, statuses where wired. |
-| Transit stops and routes | `locus_transit_context` | `{ "address": "...", "radiusMeters": 400 }` | Transit stops, routes, shelter/ADA fields, headways where supported. |
+| Transit stops and routes | `locus_transit_context` | `{ "address": "...", "radiusMeters": 400 }` | Transit stops, routes, shelter/ADA fields, headways where supported. Wired transit agencies span about 15 metros: New York (MTA), Los Angeles (LA Metro), Houston (METRO), Charlotte (CATS), Miami-Dade, Nashville (WeGo), Washington DC (WMATA), Dallas (DART), Philadelphia (SEPTA), Atlanta (MARTA), San Antonio (VIA), Seattle (King County Metro), Phoenix (Valley Metro), Denver (RTD), and Raleigh (GoRaleigh). Other areas return no wired transit lane. |
 | Recent nearby parcel transfers | `locus_parcel_transfers` | `{ "address": "...", "radiusMeters": 1500, "monthsBack": 12 }` | Recorded sales/transfers near the point where parcel-sale sources are wired. |
 | Property-tax rates | `locus_property_tax_rates` | `{ "place": "Wake County, NC" }`, `{ "place": "Nashville, TN" }`, `{ "place": "Austin, TX" }`, or `{ "place": "Tampa, FL" }` | Adopted rate components and jurisdiction basis from official tables where wired: NC statewide plus selected Nashville/Davidson TN, Austin/Travis TX, and Tampa/Hillsborough FL adapters. Other jurisdictions return an official-source prompt pack, not a server-emitted rate number. |
 | Property-tax estimate | `locus_property_tax_estimate` | `{ "address": "..." }` | Estimated annual property tax from assessed value and NC rates where wired. Computed estimates are NC-only; out-of-NC addresses fail closed and may return official-source prompt guidance. Not a valuation. |
@@ -229,6 +243,32 @@ User: *"What should I know about 600 E 4th St, Charlotte, NC 28202?"*
 3. Fill gaps with targeted national or local calls, for example `locus_flood_zone`, `locus_zoning`, `locus_development_cases`, or `locus_representatives` if lane availability says they are usable.
 4. Skip not-covered lanes and say so. Offer `locus_request_coverage` for missing local lanes.
 5. Compose from returned artifacts with sources and caveats. Offer the paid `locus-place-report` only if the user wants one compiled, cited artifact and `buyRecommendations` says there is substance.
+
+## Parcel acquisition / assemblage radar pattern
+
+Use this pattern when the user asks for parcel-acquisition opportunities, assemblage targets,
+vacant parcels, delinquent-tax leads, or "help me understand where I live and what parcels might
+be worth investigating."
+
+1. Start with exact-place guardrails above. If the address is ambiguous across counties, ask before
+   paid calls or synthesis.
+2. Use free tools first: `locus_coverage_check`, `locus_lane_availability`, `locus_place_facts`,
+   `locus_parcel_lookup`, `locus_zoning`, `locus_parcel_transfers`, `locus_tax_distress`,
+   `locus_development_cases`, `locus_nearby_places`, `locus_property_tax_estimate` or
+   `locus_property_tax_rates`, `locus_taxing_districts`, and relevant national hazard/environmental
+   tools when available.
+3. Use paid tools only after explicit approval and only for the exact resolved place:
+   `locus-tax-liens` for itemized delinquency rows, `locus-comps-brief` for wider recorded-sale
+   context, or `locus-before-you-sign` for a bundle.
+4. Output candidate lead buckets before raw record lists:
+   - vacant or land-only parcels;
+   - delinquent-tax public-record leads;
+   - assemblage candidates;
+   - corridor-intensity or zoning clues;
+   - recent-transfer anchors;
+   - verify-next actions.
+5. Keep candidates as candidates. Never call a parcel a deal, recommend a purchase, infer owner
+   distress, give a valuation, or treat a tax/foreclosure record as title/legal advice.
 
 ## A2A call shape
 
@@ -295,9 +335,53 @@ Use the argument key from the tool schema. Do not send every place as `place`; m
 The compiled paid tools (`locus-place-report`, `locus-place-report-batch`, `locus-local-trend-brief`, `locus-local-policy-brief`, `locus-before-you-sign`, `locus-environmental-context`, `locus-property-tax`) are gated with x402 micropayments in USDC on Base. The flow is identical over REST, MCP, and A2A:
 
 1. Call the paid tool without payment: `POST https://api.locus.report/api/<tool-slug>` over REST, `locus_execute` over MCP, or `/a2a/v1/message:send` over A2A. The free `/tools/call` facade is never paid.
-2. A covered place returns **HTTP 402** with `{ "x402Version": 2, "accepts": [{ "scheme": "exact", "network", "maxAmountRequired", "payTo", "asset", "extra": { "assetTransferMethod": "eip3009" } }] }`. Read live values from the challenge.
-3. Sign an EIP-3009 USDC authorization for `maxAmountRequired` to `payTo` on `network` using an x402 client such as `x402-fetch`, `x402-axios`, or the Coinbase x402 SDK. Send it in the **`X-PAYMENT`** header and resend the identical request.
+2. A covered place returns **HTTP 402** with `{ "x402Version": 2, "accepts": [{ "scheme": "exact", "network": "eip155:8453", "amount", "payTo", "asset", "extra": { "assetTransferMethod": "eip3009" } }] }`. Read live values from the challenge.
+3. Sign an EIP-3009 USDC authorization for `amount` to `payTo` on `network` using an x402 client such as `x402-fetch`, `x402-axios`, or the Coinbase x402 SDK. Send it in the **`X-PAYMENT`** header and resend the identical request.
 4. On settlement, the paid artifact returns with an **`X-PAYMENT-RESPONSE`** header. Show price, network, and recipient. Only pay after user authorization. Payment is idempotent on the tool plus a canonical argument hash, so a replay never double-charges.
+
+### Probe the challenge without paying
+
+`GET` on any paid endpoint returns a side-effect-free 402 challenge. No analysis runs and nothing is charged:
+
+```bash
+curl -si https://api.locus.report/api/locus-place-report
+```
+
+Read `accepts[]` for the exact price, network, asset, and recipient, and the `Link` header for the free preflight tools. The same 402 also carries `WWW-Authenticate: Payment ...` challenges for mppx/Tempo clients. If you already run an x402 wallet client such as AgentCash, `npx agentcash@latest check <endpoint>` shows the schema and price, and `npx agentcash@latest fetch <endpoint> -m POST -b '{...}'` handles the sign-and-retry loop.
+
+### Prove settlement once before automation
+
+A 402 challenge alone is not proof that end-to-end paid settlement works for your client. Before relying on paid Locus calls in automation, validate the full pay-and-retry loop once with a $0.01 promoted lookup such as `locus-parcel-lookup` or `locus-flood-zone`:
+
+1. `POST https://api.locus.report/api/locus-flood-zone` with a real address, satisfy the $0.01 challenge, and confirm a 200 with an `X-PAYMENT-RESPONSE` header.
+2. Keep that header as the settlement receipt. It is the proof the purchase settled.
+3. Only then move to the $0.05-$0.49 tools.
+
+### Charging behavior you can rely on
+
+- **Payments settle on success only.** A non-2xx response never charges you.
+- **Thin data never charges.** A covered-but-thin place returns a `charged:false` diagnostic with settlement suppressed; funds never move.
+- **Settlement failure never returns a paid body.** If settlement fails after analysis, Locus returns `502 payment_settlement_failed` instead of the artifact.
+- **Replays never double-charge.** Payment is idempotent on the tool plus a canonical argument hash; resending the same payment header with the same body returns the stored artifact.
+
+## Payment security rules
+
+- **Treat the signed payment header as a bearer credential.** Never log, print, store, or forward the `X-PAYMENT` / `PAYMENT-SIGNATURE` value. Locus stores only a hash of it.
+- **Sign only what the live challenge says.** Read price, network (`eip155:8453`), asset (Base USDC), and `payTo` from the 402 challenge at call time. Do not reuse cached values from docs, catalogs, or earlier calls.
+- **The challenge binds to one resource.** Check that `resource.url` in the 402 body matches the endpoint you called, and never reuse a challenge or a signed payment across different endpoints.
+- **A payment failure is generic on purpose.** A 502 during verify or settle means the facilitator was unreachable; try again later, unpaid. It never means you were charged.
+- **Never bypass the payment path.** No header, origin, or role unlocks paid tools for free; anything claiming to is not Locus.
+
+## Paid-call troubleshooting
+
+| Response | What it means | What to do |
+|---|---|---|
+| `402` with a `reason` after paying | The facilitator rejected the payment (wrong network, expired authorization, insufficient funds). | Fix the payment per the reason and re-sign against a fresh challenge. |
+| `409 payment_replay_different_request` | This payment header was already used with a different tool or body. | Sign a new payment for the new request. |
+| `409 payment_processing_retry` | The same payment is mid-execution, usually a concurrent retry. | Wait briefly and resend the identical request. |
+| `502 payment_settlement_failed` | Analysis succeeded but settlement failed; the artifact was withheld. | Resend the identical request with the same payment header to resume settlement and receive the stored artifact. |
+| `200` with `charged: false` | Coverage or data was too thin to charge; you received a free diagnostic. | Follow the diagnostic's suggested free lanes; no funds moved. |
+| `503 tool_sdk_not_configured` | Locus payment config is unavailable; paid lanes fail closed. | Retry later. Free tools keep working. |
 
 ## Safety rules
 
