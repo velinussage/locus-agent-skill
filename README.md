@@ -2,7 +2,7 @@
 
 [![skills.sh](https://skills.sh/b/velinussage/locus-agent-skill)](https://skills.sh/velinussage/locus-agent-skill)
 
-Install two Locus agent skills: the general MCP/REST/A2A capability guide and the opt-in surrounding-area purchase workflow.
+Install three Locus agent skills: the general MCP/REST/A2A capability guide, the opt-in surrounding-area purchase workflow, and the property-tax protest workflow.
 
 Locus returns awareness and verification steps, not a verdict. Do not use it to score, rank, screen, value, predict, or label a person, property, block, or neighborhood as safe or unsafe.
 
@@ -12,7 +12,7 @@ Locus returns awareness and verification steps, not a verdict. Do not use it to 
 npx @velinussage/locus-agent-skill add
 ```
 
-By default this writes `locus-agent-tools/` and `locus-surrounding-area-analysis/` to `$CODEX_HOME/skills` or `~/.codex/skills`. The general public skill routes relevant requests to the purchase workflow; it does not turn ordinary Locus discovery into a paid flow.
+By default this writes `locus-agent-tools/`, `locus-surrounding-area-analysis/`, and `locus-property-tax-protest/` to `$CODEX_HOME/skills` or `~/.codex/skills`. The general public skill routes relevant requests to the specialist workflows; it does not turn ordinary Locus discovery into a paid flow.
 
 Options:
 
@@ -65,11 +65,12 @@ npx skills use velinussage/locus-agent-skill --skill locus-agent-tools
 
 ## What the skills teach agents
 
-- 23+ national free tools work for geocodable US addresses, with 51 free tools total in the live catalog.
+- The live free catalog currently exposes 90 tools, including 49 national free lanes.
 - `locus_place_facts` is the best first call when supported.
 - `locus_lane_availability` shows national, local, varies, not-covered, and degraded lanes before payment.
 - Free tools stay read-only and cited.
-- Paid endpoints use live x402 discovery and require explicit user authorization.
+- The property-tax protest workflow keeps deadline, filing-guide, evidence, browser handoff, and published-outcome facts separate from the owner's own filing and value position.
+- Paid endpoints use live x402 discovery, may offer USDC on Base and Solana, and require explicit user authorization. Agents choose one complete `accepts[]` entry.
 - The surrounding-area workflow requires two separate approvals: $0.10 for the reusable JSON packet, then $0.15 for an eligible HTML/PDF report within 24 hours. Packet and report retrieval are proof-gated for 90 days.
 
 Docs: <https://docs.locus.report/skill.md>
@@ -77,12 +78,12 @@ Docs: <https://docs.locus.report/skill.md>
 
 ## Paid endpoint surface
 
-The live paid index is authoritative: <https://api.locus.report/.well-known/ai-tool/index.json>. Current endpoints are:
+The live paid index is authoritative: <https://api.locus.report/.well-known/ai-tool/index.json>. Selected endpoints are:
 
 | Endpoint | Current price | Notes |
 |---|---:|---|
 | `POST /api/locus-place-report` | `$0.05` | Compiled cited property-context artifact. |
-| `POST /api/locus-place-report-batch` | `$0.25` | Async 10-50 address portfolio job, one settlement. |
+| `POST /api/locus-place-report-batch` | `$0.25` | Async 3-50 address portfolio job, one settlement. |
 | `POST /api/locus-local-trend-brief` | `$0.05` | Permit, 311, and code-case local-change brief where source coverage is strong enough. |
 | `POST /api/locus-local-policy-brief` | `$0.07` | Property-relevant bills, agendas, ordinances, tax, fee, bond, housing, and permit-change context. |
 | `POST /api/locus-before-you-sign` | `$0.07` | Pre-decision bundle over parcel, trend, and policy components. |
@@ -90,6 +91,7 @@ The live paid index is authoritative: <https://api.locus.report/.well-known/ai-t
 | `POST /api/locus-property-tax` | `$0.05` | Residential property-tax artifact with assessed value, annual tax, history, effective rate, and provenance. |
 | `POST /api/locus-surrounding-area-analysis` | `$0.10` | Stored, bounded JSON evidence packet. Charge-suppressed unless the subject, surrounding-parcel foundation, and another component complete. |
 | `POST /api/locus-surrounding-area-report` | `$0.15` | One HTML/PDF rendering of an eligible packet; no research rerun. |
+| Six paid-only atomic REST routes | `$0.01` each | Workplace jobs, Wikipedia, Commons metadata, PFAS, NEI, and electricity. No free, MCP, or A2A counterpart. |
 
 Unsupported, discovery-only, commercial, or insufficient-data cases return free diagnostics instead of charging where applicable.
 
