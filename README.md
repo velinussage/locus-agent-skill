@@ -65,11 +65,11 @@ npx skills use velinussage/locus-agent-skill --skill locus-agent-tools
 
 ## What the skills teach agents
 
-- The full free catalog exposes 98 tools, including 53 national free lanes. Read the live catalog because rollout configuration can change the visible total.
+- The full free catalog exposes 104 tools, including 58 national free lanes. Read the live catalog because rollout configuration can change the visible total.
 - `locus_place_facts` is the best first call when supported.
 - `locus_lane_availability` shows national, local, varies, not-covered, and degraded lanes before payment.
 - Free tools stay read-only and cited.
-- `locus_rental_registration_check` reads building-level municipal registration/license records and linked housing-enforcement components for Minneapolis, Seattle, and New York City. It returns no legal-rental or compliance verdict.
+- `locus_rental_registration_check` declares its scope per jurisdiction. Long-term registration is wired in Minneapolis, Montgomery County, New York City, and Seattle; Denver is short-term-license only; Kansas City is building-enforcement only. It returns no legal-rental or compliance verdict.
 - The property-tax protest workflow keeps deadline, filing-guide, evidence, browser handoff, and published-outcome facts separate from the owner's own filing and value position.
 - Paid endpoints use live x402 discovery, may offer USDC on Base and Solana, and require explicit user authorization. Agents choose one complete `accepts[]` entry.
 - The surrounding-area workflow requires two separate approvals: $0.10 for the reusable JSON packet, then $0.15 for an eligible HTML/PDF report within 24 hours. Packet and report retrieval are proof-gated for 90 days.
@@ -90,7 +90,11 @@ The live paid index is authoritative: <https://api.locus.report/.well-known/ai-t
 | `POST /api/locus-before-you-sign` | `$0.07` | Pre-decision bundle over parcel, trend, and policy components. |
 | `POST /api/locus-environmental-context` | `$0.05` | Address-level EPA TRI/RCRA/SDWIS/radon context ranked by distance where possible. |
 | `POST /api/locus-property-tax` | `$0.05` | Residential property-tax artifact with assessed value, annual tax, history, effective rate, and provenance. |
-| `POST /api/locus-rental-registration-check` | `$0.01` | Paid dual of the free exact-building rental registration and housing-enforcement lookup for Minneapolis, Seattle, and New York City. |
+| `POST /api/locus-rental-registration-check` | `$0.01` | Paid dual of the free exact-building long-term-registration, short-term-license, or building-enforcement lookup, depending on jurisdiction. |
+| `POST /api/locus-nyc-recording-history` | `$0.01` | Paid dual of the free bounded NYC ACRIS document index. No party or unit data and no title conclusion. |
+| `POST /api/locus-renovation-site-context` | `$0.10` | Fixed renovation evidence workflow over parcel, permit, soil, terrain, flood, wetland, and radon context. |
+| `POST /api/locus-solar-property-screen` | `$0.49` | Rollout-gated private one-address roof-solar and historical financial-reference screen. |
+| `POST /api/locus-large-site-satellite-change` | `$0.15` | Direct Copernicus REST-only pair of dated Sentinel-2 Level-2A images for a 1-100 square-kilometre site. No automated change or condition claim. |
 | `POST /api/locus-surrounding-area-analysis` | `$0.10` | Stored, bounded JSON evidence packet. Charge-suppressed unless the subject, surrounding-parcel foundation, and another component complete. |
 | `POST /api/locus-surrounding-area-report` | `$0.15` | One HTML/PDF rendering of an eligible packet; no research rerun. |
 | Six paid-only atomic REST routes | `$0.01` each | Workplace jobs, Wikipedia, Commons metadata, PFAS, NEI, and electricity. No free, MCP, or A2A counterpart. |

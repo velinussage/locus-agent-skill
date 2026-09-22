@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.33.0
+version: 1.40.0
 description: Use every time the task is a US address or place and you need cited official public records or local-government context — due diligence, flood, zoning, permits, taxes, what changed, or before you sign.
 triggers:
   - property due diligence
@@ -9,7 +9,10 @@ triggers:
   - zoning
   - building permits
   - rental registration check
+  - nyc deed and mortgage history
+  - one address solar screen
   - renovation site context
+  - large site satellite change
   - property tax
   - before you sign
   - what changed at this address
@@ -32,15 +35,21 @@ Locus returns awareness and verification steps, not a verdict. Do not score, ran
 - Every time the question is a US address or place plus official records or local-government context, call `locus_lane_availability` or `locus_suggest_workflow` first.
 - Looking is free. Paying happens only after an x402 challenge the user authorized.
 - Do not buy a generic scrape of FEMA, EPA ECHO/SDWIS/TRI, USGS, HUD, FCC, county GIS, or assessor sites Locus already wraps with provenance. Still follow the official source link Locus returned when you need to verify.
+- **Multi-home comparison:** when the job is two or three finalist addresses, read the dedicated workflow skill at `https://api.locus.report/.well-known/skills/compare-homes/v1.md`. Successful `locus_lane_availability` responses may include optional `skillContinuation` metadata pointing there when report compose rollout is enabled.
+- **Paid buyer bundle:** for a three-home RentCast matrix with work items, use `locus-three-property-buyer-comparison` after user approval; its paid response may also include the same continuation metadata when compose is enabled.
 
 ## What to remember first
 
-- **53 national free tools are available with no payment or local coverage check.** The live free catalog exposes 98 tools total. Use national free lanes for rural addresses too, including flood, storm, wildfire, soil, groundwater-monitoring wells, cleanup, toxic-release, underground storage tank / leaking-tank, drought, water-system and non-UCMR PFAS records, water leak-policy candidates, electric service-territory candidates, sewer-overflow/CSO context, broadband, wetland, terrain, air-quality, governing-district, housing/economic, nearby-place, public-utility, county Medicare-spending, aggregate traffic-crash context, open disaster-assistance dates, conforming loan limits, and mortgage-calendar facts. Mirror-backed lanes return explicit missing, partial, stale, or unavailable states instead of treating missing data as favorable.
+- **A large set of national free tools is available with no payment or local coverage check.** Read `https://api.locus.report/tools/list` for the current free catalog; each tool also has its own `POST /api/<tool_name>` path. Use national free lanes for rural addresses too, including flood, storm, wildfire, soil, groundwater-monitoring wells, cleanup, toxic-release, underground storage tank / leaking-tank, drought, water-system and non-UCMR PFAS records, water leak-policy candidates, electric service-territory candidates, sewer-overflow/CSO context, broadband, wetland, terrain, air-quality, governing-district, housing/economic, nearby-place, public-utility, county Medicare-spending, official Sentinel-2 scene availability, aggregate traffic-crash context, open disaster-assistance dates, conforming loan limits, and mortgage-calendar facts. Mirror-backed lanes return explicit missing, partial, stale, or unavailable states instead of treating missing data as favorable.
 - **National free tools cover all 50 states for geocodable US addresses.** Local lanes are wired jurisdiction by jurisdiction and are growing. Always expect national context. Treat local parcel, zoning, permit, tax, and development-case depth as coverage-dependent.
 - **Start with `locus_place_facts` when lane availability says it is available.** It is the one-call address bundle for supported parcel areas: parcel facts, FEMA flood zone, governing districts, transportation context, and tax context where wired.
 - **Use `locus_lane_availability` before paid calls.** Summary mode gives a short native-product shortlist. Use `detailLevel: "full"` or the paid index for exact paid-only atomic buy signals.
 - **Treat partial trend coverage as a check-first signal.** `supported_partial` trend places appear in `lanes.varies` with low paid substance; buy `locus-local-trend-brief` only when `buyRecommendations[].substanceHere` is `medium` or better. Thin exact-radius results can return a `charged:false` data-sufficiency diagnostic instead of a paid brief.
-- **The full paid catalog has 94 endpoints: 29 native paid tools, 58 promoted dual-rail routes, and 7 paid-only atomic routes.** Rollout-gated tools appear in the live catalog only when configured. Six paid-only atomics cost $0.01: `locus-workplace-employment-context`, `locus-wikimedia-commons-area-context`, `locus-wikipedia-place-context`, `locus-pfas-occurrence`, `locus-nei-emissions-nearby`, and `locus-electricity-context`. The paid-only `locus-evaluation-packet` costs $0.35. They use x402 over REST and have no free underscore, MCP, or A2A counterpart. Read the live challenge for exact price, chain, asset, recipient, and schema before payment.
+- **The paid catalog mixes native paid tools, promoted dual-rail routes, and paid-only atomic routes.** Read `GET /.well-known/locus-tools.json` for the current set and count. Rollout-gated tools appear in the live catalog only when configured. Six paid-only atomics cost $0.01: `locus-workplace-employment-context`, `locus-wikimedia-commons-area-context`, `locus-wikipedia-place-context`, `locus-pfas-occurrence`, `locus-nei-emissions-nearby`, and `locus-electricity-context`. The paid-only `locus-evaluation-packet` costs $0.35. They use x402 over REST and have no free underscore, MCP, or A2A counterpart. Read the live challenge for exact price, chain, asset, recipient, and schema before payment.
+- **Never plan against a count written in this guide.** This file is installed on disk and cannot track tools as they land, so it states no catalog totals. `GET /tools/list` (free rail) and `GET /.well-known/locus-tools.json` (full catalog) are the only authorities for what exists, what it costs, and what is enabled for a given deployment.
+- **Paid reports are async-grade, not click-and-wait.** A full `locus-place-report` takes 60-120 seconds; set a 120-second client timeout. A failed call (502/503 or timeout) is never charged: settlement only runs after the artifact is ready, so retrying is safe. For unattended runs use `locus-place-report-batch` (one settlement, poll the job) instead of tight synchronous retries.
+- **Owner and landlord questions start with the protest pack.** `locus_appeal_window` (deadline arithmetic), `locus_appeal_filing_guide`, `locus_appeal_outcomes`, and `locus-owner-action-brief` ($0.05) are the highest-value sequence for anyone paying property tax; run them before any valuation-style question.
+- **Locus describes the property, never the person.** Owner names, phone numbers, and mailing contacts are excluded by design. For outreach, pair Locus with a licensed skip-tracing source; use Locus for the parcel, tax-status, permit, and area facts that decide whether outreach is worth it.
 
 ## Quick connect
 
@@ -78,11 +87,48 @@ A2A and REST discovery:
 
 Buyers do not need a Locus or Coinbase Developer Platform account API key. Free tools are open. Paid tools return a live x402 or advertised MPP challenge. `PAYMENT-SIGNATURE` is a signed payment credential, not an account API key.
 
+### Fastest paid setup with AgentCash
+
+The whole free catalog runs without any of this. Get a wallet when you choose to call a paid route.
+
+AgentCash is one compatible x402 client. It creates a local payer wallet and can install its MCP server into common agent clients. Locus issues no buyer API key.
+
+```bash
+npx agentcash@latest onboard
+npx agentcash@latest install --client codex   # or claude-code, cursor, and other supported clients
+npx agentcash@latest balance                  # spendable balance
+```
+
+A zero balance means one of three moves: `npx agentcash@latest fund` for the guided flow, `npx agentcash@latest accounts` for deposit links and per-network addresses, or `npx agentcash@latest redeem <code>` for an invite code.
+
+Enumerate Locus endpoints, then read one before you call it:
+
+```bash
+npx agentcash@latest discover https://api.locus.report
+npx agentcash@latest check https://api.locus.report/api/locus-flood-zone
+```
+
+`check` returns request and response schema plus pricing before any payment. Then call it, capping the amount:
+
+```bash
+npx agentcash@latest fetch https://api.locus.report/api/locus-flood-zone \
+  -m POST -p x402 --payment-network base --max-amount 0.01 \
+  -b '{"address":"1 E Edenton St, Raleigh, NC 27601"}'
+```
+
+`fetch` handles paid and SIWX routes alike and pays only when the route still demands payment. Hold the same `--payment-network` across every call in one workflow. Force x402 with `-p x402` when an endpoint advertises several rails. Full command reference: [agentcash docs](https://www.npmjs.com/package/agentcash).
+
+Install the Locus skill separately with `npx @velinussage/locus-agent-skill@latest add`. Use the free Locus MCP or the `POST /api/<tool_name>` routes first.
+
+Read the live challenge and ask before every payment. Keep the settlement receipt.
+
 For broad requests, start with the current bundles in the top-agent manifest. For exact lanes, use the full catalog. A paid entry has a free underscore route only when it publishes `dualFreeTool` or a free `counterparts[]` entry. The seven paid-only atomics do not. Free executor names use underscores (`locus_zoning`); paid REST slugs use hyphens (`locus-zoning`). Execute the entry's exact `callName`.
 
 The live catalogs are authoritative for tool names, schemas, prices, and endpoints. Do not copy stale tool definitions into prompts.
 
 ## Surrounding-area orchestration route
+
+This route is rollout-gated. Call it only when `locus-surrounding-area-analysis` appears in the live paid index at `/.well-known/ai-tool/index.json`; when absent, use the free `locus_surrounding_parcels` primitive plus the individual lanes instead of assuming the $0.10/$0.15 workflow exists.
 
 When the buyer wants more than the free `locus_surrounding_parcels` primitive and needs one composed view of surrounding parcels, zoning, development cases, permits, legislation, transportation/capital projects, environmental mechanisms, and optional dated aerial evidence, load the separate `locus-surrounding-area-analysis` skill. It owns the paid two-stage workflow and its recovery states. Keep this general capability skill on free discovery and the broader public tool surface; do not copy the paid workflow into ordinary Locus calls. For 100 or 200 m compact windows, treat exact returned distances as the window result. Standard ring aggregates are `null` whenever the request did not cover that full 250, 500, or 1,000 m ring.
 
@@ -155,8 +201,14 @@ Trimmed response example for a rural Montana ZIP:
     },
     "lanes": {
       "national": [
+        { "tool": "locus_3dep_availability", "access": "free", "what": "Dated LiDAR collection and raster-source availability; terrain estimates with vintage" },
         { "tool": "locus_flood_zone", "what": "FEMA flood-zone designation at the point", "access": "free" },
         { "tool": "locus_flood_determination_inputs", "what": "SFHDF form inputs: NFIP community, FIRM panel and date, zone, LOMA/LOMR, CBRS status", "access": "free" },
+        { "tool": "locus_flood_premium_context", "what": "NFIP policy-cost distribution for policies in force in the ZIP (estimate, not a quote)", "access": "free" },
+        { "tool": "locus_homeowners_insurance_context", "what": "ACS median homeowners-insurance cost band and owner costs by ZIP, county, state (estimate)", "access": "free" },
+        { "tool": "locus_property_tax_context", "what": "ACS effective property-tax rate and median bill by ZIP, county, state (estimate)", "access": "free" },
+        { "tool": "locus_market_context", "what": "County listing price, inventory, days on market (FRED) plus ACS value and rent (estimate)", "access": "free" },
+        { "tool": "locus_rebuild_cost_context", "what": "County permit valuation per unit trended by construction PPI as a labeled rebuild-cost proxy", "access": "free" },
         { "tool": "locus_environmental_records_screen", "what": "ASTM E1527-21 government-records screen at standard search distances", "access": "free" },
         { "tool": "locus_tax_payment_status", "what": "Treasurer real-estate tax balances by parcel (Philadelphia)", "access": "free" },
         { "tool": "locus_radon_zone", "what": "EPA radon zone for the county", "access": "free" },
@@ -210,10 +262,13 @@ Route these first when the buyer already knows the property or shortlist:
 1. **Three known properties:** use `locus-three-property-buyer-comparison` at `$2.49`. It calculates cited cross-property differences such as living area, lot size, build year, bedrooms, and assessment movement, then returns executable next calls for all three properties without choosing a winner.
 2. **A reassessment notice or owner cost question:** use `locus-owner-cost-review` at `$0.25`. The price includes one conservatively priced Turnkey signature. It leads with the recorded tax or assessment change, connects cited programs and dates, and returns ready calls for follow-up. It does not infer the cause or determine eligibility.
 3. **Rental operations for one property:** use `locus-rental-operations-brief` at `$0.79`. It compares the third-party subject rent estimate with the ZIP rental-listing median, then returns ready calls for current local-record follow-up. It is not rent-setting advice or tenant screening.
-4. **Rental registration or license record:** use free `locus_rental_registration_check` for an exact building in Minneapolis, Seattle, or New York City. It returns the source-published status, dates, units, linked housing-enforcement components, query limits, and verify-next questions. Agent-commerce callers may use the identical `$0.01` REST `locus-rental-registration-check` dual. It never decides whether the dwelling may lawfully be rented or whether a person or property complies.
-5. **Rental-registration portfolio:** use `locus-record-batch` at `$0.05` with 2-25 exact addresses and `lanes: ["locus_rental_registration_check"]`. One async job returns results keyed by address. Addresses outside the three-city source registry remain explicit out-of-coverage items; do not treat them as unregistered.
+4. **Rental registration, short-term license, or building enforcement:** use free `locus_rental_registration_check` for an exact building. Read `recordScope` before interpreting the result. Long-term registration is wired in Minneapolis, Montgomery County, New York City, and Seattle. Denver is short-term-license only. Kansas City is building-enforcement only and cannot answer whether a rental registration exists. Agent-commerce callers may use the identical `$0.01` REST dual. Never turn a row or no-match into legal permission, compliance, habitability, or a person judgment.
+5. **NYC deed and mortgage index:** use free `locus_nyc_recording_history` with one NYC address or exact 10-digit BBL. It joins ACRIS Legals to ACRIS Master and returns bounded document ids, types, dates, source-published amounts, and citations without party or unit data. The `$0.01` REST dual is identical. It is not a title, lien, payoff, ownership, priority, validity, or insurability conclusion.
+6. **Rental-registration portfolio:** use `locus-record-batch` at `$0.05` with 2-25 exact addresses and `lanes: ["locus_rental_registration_check"]`. One async job returns results keyed by address. Addresses outside the current source registry remain explicit out-of-coverage items; do not treat them as unregistered.
 
 These products return `nextCalls[]` instead of a prose narrative. Each call includes the exact `tool`, ready `input`, one-sentence `why`, supporting `evidenceIds`, `cost`, `urgency`, endpoint, and `requiresPaymentApproval`. `cost` is `free` or the exact dollar price from Locus's central price registry when the workflow was generated. `costAtGeneration` remains an identical compatibility alias. `nextCallPlan.pricedAt` timestamps the price snapshot; the next tool's live challenge remains authoritative. A small model may select and order only server-built candidate IDs. Locus owns and validates every returned tool name, argument object, price snapshot, evidence link, and payment flag. Model failure uses the deterministic candidate order. A paid next call is never executed without separate approval.
+
+The three RentCast workflows already use Turnkey to buy from the RentCast x402 gateway. Each signing activity must show that the configured exact Turnkey policy, and no unexpected broader policy, returned `OUTCOME_ALLOW` before paid dispatch. Do not reroute the atomic `locus-property-tax` or `locus-rent-estimate` endpoints: their direct API-key adapter has separate caching and usage controls. On workflow failure, distinguish workflow-state, challenge, signer, payment-rejection, upstream-result, and provider failures by their exact `rentcast_*` code. Honor `Retry-After`. Never treat a paid sale-listing HTTP 404 as proof that no active listing exists, and never retry a payment-bearing downstream request automatically.
 
 ### Paid product ladder (use one path)
 
@@ -227,6 +282,10 @@ These products return `nextCalls[]` instead of a prose narrative. Each call incl
 | Compiled place artifact | `locus-place-report` ($0.05) | Stitching free tools into a fake report |
 | Recent official change + media | `locus-property-update` ($0.10) | Flyer first |
 | Compare three known rooftops for solar | `locus-solar-property-comparison` ($1.09) | Calling roof, utility, and financial providers separately |
+| Screen one known rooftop for solar | `locus-solar-property-screen` ($0.49) | Treating modeled roof output or a historical financial reference as an installation recommendation |
+| Research a renovation site | `locus-renovation-site-context` ($0.10) | Calling the broader follow-up route with mutable intent fields |
+| Review NYC recording history | `locus_nyc_recording_history` (free) or `locus-nyc-recording-history` ($0.01) | Treating an ACRIS document index as a title or lien conclusion |
+| Compare dated imagery for a large site | `locus-large-site-satellite-change` ($0.15, direct Copernicus) | Claiming building condition or detected change from 10 m pixels |
 | Compare three known properties for a buyer | `locus-three-property-buyer-comparison` ($2.49) | Raw property, listing, market, and public-record calls without identity, deterministic differences, or ready next calls |
 | Review owner costs and deadlines | `locus-owner-cost-review` ($0.25) | Inferring why taxes changed or treating a program as eligibility |
 | Review rental property operations | `locus-rental-operations-brief` ($0.79) | Raw rent estimates without HUD, permit, tax, market, work items, or ready next calls |
@@ -247,16 +306,21 @@ Use these only after `locus_lane_availability` or the paid index says the call h
 | `POST /api/locus-nei-emissions-nearby` | `$0.01` | Environmental diligence needs distance-ranked EPA NEI facilities and per-pollutant annual quantities. Use `detailLevel: "full"` only for the complete large matrix. | No facility rows, unloaded year, or unavailable mirror returns `charged:false`. |
 | `POST /api/locus-evaluation-packet` | `$0.35` | A lender needs the evaluation-support packet in Interagency Appraisal and Evaluation Guidelines order (parcel, zoning, permits, transfers, HPI, SFHDF flood inputs, ASTM E1527-21 screen, tax distress, treasurer status) with every source stamped. States no value. | Unresolved point or no property-description and hazard fact returns the packet with `charged: false`. |
 | `POST /api/locus-electricity-context` | `$0.01` | Data-center, industrial, energy-development, or power-sensitive site screens need HIFLD line proximity plus EIA state price context before utility diligence. | An unresolved point or failure of both source components returns `charged:false`. |
+| `POST /api/locus-insurance-context` | `$0.05` | An insurance question on one address: the parcel FEMA zone with the federal purchase-requirement rule, NFIP policy-cost distribution for the ZIP, ACS homeowners-insurance cost bands, and a county rebuild proxy, in one call. Estimates with vintages, never a quote. | `charged: false` when the point does not resolve or no section returns data. |
 | `POST /api/locus-record-batch` | `$0.05` | A portfolio or any-jurisdiction screen needs up to 6 free record lanes across 2-25 addresses as ONE async job keyed by address; poll `statusUrl`. | Unresolved addresses are listed and never charged; `charged: false` when no address resolves or no valid lane is named. |
 | `POST /api/locus-surrounding-area-analysis` | `$0.10` | Buyer needs one stored multi-lane surrounding packet: topology-aware parcels, zoning, development, permits, legislation, capital/transport, environmental baseline, optional aerial. | Unstable subject, missing surrounding-parcel foundation, or under two completed components returns `charged:false`. |
 | `POST /api/locus-surrounding-area-report` | `$0.15` | HTML+PDF upgrade of an active surrounding-area packet within the 24h upgrade window. | Invalid/expired proof, second report, or render failure does not charge. |
 | `POST /api/locus-place-report` | `$0.05` | Agent needs one compiled cited property-context artifact for an address or ZIP. The artifact confirms the matched subject, lists every source, and carries an honest coverage ledger. After confirmed x402 settlement or seller-escrow, the paid parcel-financials lane may include the assessor owner-of-record name for the same exact parcel (cited, not a contact). Canonical storage stays owner-free; settled replay refreshes the official field. | Unsupported or discovery-only places return no-charge diagnostics. |
 | `POST /api/locus-property-update` | `$0.10` | Agent needs an async exact-address decision check of recent or scheduled official-record changes, nearby activity, and physical comparability, with a shareable report, PDF, and temporary video. | Ambiguous, thin, or unsupported inputs return `charged:false`; on `clarification_required`, confirm and resend `retryInput`. Poll the job and, once `flyerReady:true`, use `flyerHandoff` immediately without waiting for video. |
 | `POST /api/locus-solar-property-comparison` | `$1.09` | Agent has exactly three known addresses and wants parcel-bound, dated Google Solar roof metrics beside utility candidates, cited solar-program rows, and one shared GridPulse reference. Input: `{ "addresses": ["...", "...", "..."], "financialZip": "27312", "systemKw": 8 }`. Results stay in input order for side-by-side review; Locus does not select a winner or recommend a property. | Fewer than two attributable Google Solar results return `charged:false`. The price includes up to four Turnkey signatures at the conservative Pay as You Go rate. GridPulse figures remain historical context. Licensed provider data is private, `no-store`, and excluded from public pinning. x402 only. |
+| `POST /api/locus-solar-property-screen` | `$0.49` | Agent has one exact address and wants parcel-bound, dated Google Solar roof metrics beside utility candidates, cited programs, and a separately labeled GridPulse reference. Input: `{ "address": "...", "financialZip": "27312", "systemKw": 8 }`. | Missing or mismatched Google Solar evidence returns `charged:false` before GridPulse runs. The price includes two conservative Turnkey signature costs. No score, installation recommendation, current incentive claim, or utility-service conclusion. Private, `no-store`, x402 only. |
+| `POST /api/locus-renovation-site-context` | `$0.10` | Agent needs the fixed renovation evidence profile for one exact address and optional `projectType`. It combines parcel facts, exact-subject permits, USDA soil interpretations, sampled terrain, FEMA flood, mapped wetlands, and EPA county radon context. | The route fixes `intent`, transaction stage, and project archetype server-side. It does not determine feasibility, condition, design, permit requirements, cost, value, or construction readiness. Thin evidence is charge-free. |
+| `POST /api/locus-large-site-satellite-change` | `$0.15` | Requires `bbox` [west, south, east, north] WGS84 and `beforeDate`/`afterDate` (YYYY-MM-DD; after later). No address input. Area 1-100 km²; each side ≥500 m; aspect ratio ≤8:1. For an address, use free `locus_satellite_area_prepare` first. Returns two dated Sentinel-2 images, not individual-building imagery. | Uses direct Copernicus catalogue discovery plus two quota-backed Sentinel Hub renders, with no paid upstream or Turnkey signature. Returns official catalogue candidates, published tile cloud cover, imagery, and requested window metadata. It does not detect, classify, quantify, or explain change and cannot support individual-building condition claims. Private, `no-store`, REST x402 only. |
 | `POST /api/locus-three-property-buyer-comparison` | `$2.49` | Agent has exactly three known addresses and wants non-PII RentCast property/listing lookups, ZIP market context, bounded Locus public records, reusable work items, deterministic cross-property differences, and validated `nextCalls[]` for all three properties. | Invalid, unresolved, or duplicate resolved subjects fail before downstream spend. The price includes up to nine Turnkey signatures at the conservative Pay as You Go rate. Input order is preserved. No winner, valuation, prediction, or purchase recommendation. Private, `no-store`, x402 only. |
 | `POST /api/locus-owner-cost-review` | `$0.25` | Owner or representative has a reassessment or cost question and needs one property/tax trajectory beside cited programs, published windows, work items, and validated `nextCalls[]` with exact arguments and urgency. | An unresolved subject fails before downstream spend. The price includes one conservatively priced Turnkey signature. The response does not infer why tax changed, determine eligibility, or advise an appeal. Private, `no-store`, x402 only. |
 | `POST /api/locus-rental-operations-brief` | `$0.79` | Property operator needs a non-PII property lookup, third-party rent estimate, ZIP rental market, HUD/public-record context, work items, a deterministic rent-to-market difference, and validated `nextCalls[]`. | An unresolved subject fails before downstream spend. The price includes up to three Turnkey signatures at the conservative Pay as You Go rate. Comparable addresses and listing contacts are removed. No tenant screening, rent-setting advice, return calculation, or investment recommendation. Private, `no-store`, x402 only. |
-| `POST /api/locus-rental-registration-check` | `$0.01` | Agent needs source-published building registration/license status and available housing-enforcement components for Minneapolis, Seattle, or New York City. The same lookup is free as `locus_rental_registration_check`. | Unsupported, unresolved, or registration-source-unavailable calls return `charged:false`. A successful exact-source no-match is chargeable and remains source-bounded. No owner, contact, property-name, apartment, narrative, or nearby-address fields; no legal-rental or compliance verdict. |
+| `POST /api/locus-rental-registration-check` | `$0.01` | Agent needs an exact-building long-term registration, short-term license, or enforcement-only lookup in a wired jurisdiction. The same lookup is free as `locus_rental_registration_check`; read `recordScope` before interpreting it. | Unsupported, unresolved, or source-unavailable calls return `charged:false`. A successful exact-source no-match is chargeable and source-bounded. No owner, contact, property-name, apartment, narrative, or nearby-address fields; no legal-rental or compliance verdict. |
+| `POST /api/locus-nyc-recording-history` | `$0.01` | Agent needs a bounded ACRIS deed, mortgage, satisfaction, assignment, and related-document index for one exact NYC address or BBL. The same lookup is free as `locus_nyc_recording_history`. | A successful exact-source no-match is chargeable. Party names and unit identifiers are not queried. No title, lien, payoff, ownership, priority, validity, or insurability conclusion. |
 | `POST /api/locus-property-flyer` | `$0.99` | After obtaining a proof-gated PDF URL + expiry from a report workflow, the agent wants a general 4:5 property shareable whose top-right QR opens that PDF. Pass the property-update job's copy-ready `flyerHandoff` as the flyer-specific `reportHandoff`; do not synthesize a proof or reuse the video render contract. A licensed subject image is optional. Brand it with `brand.logo`, `brand.contact` (name, brokerage, license, phone, email, website), and `brand.headshot`. | Missing runtime, usable research, imagery, or premium model output returns `charged:false`. The price includes one conservative Turnkey signature when StableEnrich research runs. |
 | `POST /api/locus-place-report-batch` | `$0.25` | Agent has a 3-50 address portfolio and wants one async job plus one settlement. | If all items are unsupported or discovery-only, no charge. Unsupported items inside a paid job remain item-level diagnostics. |
 | `POST /api/locus-local-trend-brief` | `$0.05` | Agent needs permit, 311, or code-case local-change series where the registry has enough source coverage. | Unsupported, discovery-only, or insufficient-data places return `charged:false` diagnostics. |
@@ -277,10 +341,11 @@ Use these only after `locus_lane_availability` or the paid index says the call h
 | `POST /api/locus-rent-estimate` | `$0.05` | Agent needs a third-party residential long-term rent estimate, range, comparable count, and HUD FMR area anchor. | No estimate, no comparables, commercial use, missing key, or uncovered inputs return `charged:false`. Not a Locus-authored valuation. |
 | `POST /api/locus-valuation-challenge` | `$0.10` | Agent wants to stress-test a caller-supplied property price or `source: "assessment_notice"` figure against cited sale, parcel, permit, hazard, tax, zoning, policy, and same-roll assessment-uniformity evidence without Locus creating a price. | Fewer than two substantive cited sections return `charged:false`; uniformity needs at least five same-class parcels to count. |
 | `POST /api/locus-road-access` | `$0.05` | Agent needs nearest mapped public-road proximity from an address/point as an early access screen. | Unresolved address or total source failure returns `charged:false`. Never a legal-access, easement, frontage, or landlocked determination. |
+| `POST /api/locus-assessment-position` | `$0.10` | Owner or agent asks where a tax assessment sits among similar properties on the same roll, the appeal deadline rule, and how to file. No dollar figure required. | Charged only when the same-roll sample is substantive; unresolved address or thin sample returns `charged:false` with the deadline rule and filing guide still attached. Descriptive percentile only; never a determination of over-assessment or advice to appeal. |
 | `POST /api/locus-power-water-evidence-pack` | `$0.05` | Agent needs pre-development proximity/context from HIFLD/EIA power, EPA public-water-system, and FCC broadband sources. | Missing substantive evidence suppresses charge. Never claims capacity, interconnection, service availability, timing, or cost. |
 | `POST /api/locus-landslide-diligence` | `$0.05` | Agent needs separate USGS documented inventory history and exact source-native n10 model-cell evidence. | Unless both components answer, returns `charged:false`. Never a probability, parcel stability finding, engineering assessment, or safety label. |
 | `POST /api/locus-permit-closeout-check` | `$0.05` | Agent needs exact-subject permit status plus source-published closeout or occupancy-document evidence. Registry coverage: Raleigh, unincorporated Wake County, Durham, Austin, Seattle, Chicago, Los Angeles, and New York City. It accepts an address or up to 25 jurisdiction-scoped `parcelIds`. The coverage label is generated from the source registry. | Uncovered, uncertain, unavailable, unpublished, and no-exact-match states are charge-suppressed. Not condition, compliance, suite/use permission, or closing approval. |
-| `POST /api/locus-transaction-follow-up` | `$0.10` | Agent needs one explicit homebuyer, land-investor, developer-predevelopment, commercial-tenant, or renovation-planning packet with cited handoffs. For renovation use `intent: "renovation_planning"`, `transactionStage: "pre_construction"`, `projectArchetype: "residential"`, and a short caller-supplied `projectType`. The profile checks recorded parcel facts, exact-subject permits, USDA basement and shallow-excavation soil interpretations, sampled terrain, FEMA flood, mapped wetlands, and EPA county radon context. | Profile-specific component/group thresholds control chargeability. Assessor totals never establish above-grade or finished-basement area. The result is not a feasibility, condition, drainage-design, permit-requirement, cost, or valuation conclusion. Thin evidence is charge-free. |
+| `POST /api/locus-transaction-follow-up` | `$0.10` | Agent needs one explicit homebuyer, land-investor, developer-predevelopment, commercial-tenant, or renovation-planning packet with cited handoffs. Prefer the dedicated `locus-renovation-site-context` route for renovation work because it fixes the profile server-side. | Profile-specific component/group thresholds control chargeability. Assessor totals never establish above-grade or finished-basement area. The result is not a feasibility, condition, drainage-design, permit-requirement, cost, or valuation conclusion. Thin evidence is charge-free. |
 
 ### Best first call for supported address context
 
@@ -301,6 +366,11 @@ These work for geocodable US addresses at no cost. Some accept address directly.
 |---|---|---|---|
 | FEMA flood zone at a point | `locus_flood_zone` | `{ "address": "600 E 4th St, Charlotte, NC" }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Flood zone code, SFHA flag, panel or DFIRM identifiers when returned, plain-language zone context, provenance, verify-next steps. |
 | Flood determination form inputs for a loan file | `locus_flood_determination_inputs` | `{ "address": "100 Beach Rd, Surf City, NC" }` | SFHDF fields in section order: NFIP community name and number, FIRM panel and effective date, zone and SFHA, LOMA/LOMR polygons, USFWS CBRS unit and buffer status, per-source status. Not a determination; no 12 CFR 22.6 guarantee. |
+| Flood insurance cost context (estimate) | `locus_flood_premium_context` | `{ "address": "142 Hedgerow, Pittsboro, NC 27312" }` | Median and quartiles of annual NFIP policy cost and full-risk premium for policies in force in the ZIP, split SFHA vs minimal hazard, with policy count and vintage. Not a quote. |
+| Homeowners insurance cost context (estimate) | `locus_homeowners_insurance_context` | `{ "address": "142 Hedgerow, Pittsboro, NC 27312" }` | ACS 2023 median annual insurance-cost band by mortgage status and monthly owner costs at ZIP, county, state; state regulator sample-rate link where published. |
+| Property tax burden context (estimate) | `locus_property_tax_context` | `{ "address": "142 Hedgerow, Pittsboro, NC 27312" }` | ACS median real-estate tax, median home value, and implied effective rate at ZIP, county, state; Lincoln Institute study linked. |
+| Housing market context (estimate) | `locus_market_context` | `{ "address": "142 Hedgerow, Pittsboro, NC 27312" }` | County median listing price, active listings, days on market with year change (FRED), plus ACS value and rent medians. Not a valuation. |
+| Rebuild-cost proxy (estimate, labeled proxy) | `locus_rebuild_cost_context` | `{ "address": "142 Hedgerow, Pittsboro, NC 27312" }` | County permit valuation per unit, PPI trend, implied $/sq ft range under a stated size assumption, floored at FEMA $100. Never a coverage amount. |
 | Environmental records screen for a Phase I file | `locus_environmental_records_screen` | `{ "address": "1500 Market St, Philadelphia, PA" }` | NPL, cleanup, RCRA, UST/LUST, and TRI lists at ASTM E1527-21 search distances with records returned, records within distance, nearest distance, and per-list status. Government-records step only; never a Phase I. |
 | Treasurer tax payment status (Philadelphia) | `locus_tax_payment_status` | `{ "address": "2401 Pennsylvania Ave, Philadelphia, PA 19130", "unit": "5C42" }` | Outstanding principal, interest, penalty, lien numbers by tax year per OPA parcel; `no_outstanding_balance_recorded` when the dataset has no rows. Out of coverage elsewhere. |
 | Nearby flood gauges | `locus_flood_gauges` | `{ "address": "...", "radiusMeters": 20000 }` | Nearby USGS/NWS gauges, latest stage/flow observations when available, threshold metadata, source links. |
@@ -330,14 +400,18 @@ These work for geocodable US addresses at no cost. Some accept address directly.
 | Qualified Opportunity Zone | `locus_opportunity_zone` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Whether the point is in a Treasury/IRS Qualified Opportunity Zone tract, cited to HUD. A `not_designated` zero-hit is a valid designation answer, not a coverage failure. Not tax or investment advice. |
 | Seismic design parameters | `locus_seismic_design` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | USGS NEHRP/ASCE 7 seismic design parameters for a point. Hazard data only, not a safety verdict. |
 | County unemployment trend | `locus_unemployment` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Recent BLS LAUS county unemployment trend. Reported statistic only, not an area-quality label. |
+| County jobs vs housing permitted | `locus_housing_supply_balance` | `{ "address": "..." }` or `{ "latitude": 35.78, "longitude": -78.64 }` | BLS QCEW county job change over Census BPS units permitted the prior year, plus the permits share of ACS housing stock. Cited published benchmarks and the published critiques of the metric ship together; Locus performs no comparison. |
 | State house-price index | `locus_house_price_index` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Latest state-level FHFA All-Transactions House Price Index and year-over-year change via FRED. Not an appraisal or value estimate. |
 | Broadband availability map | `locus_broadband_check` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Official FCC National Broadband Map link and current data vintage. Provider-reported availability; no fast/slow/good/bad verdict. |
 | Mapped wetland overlap/proximity | `locus_wetland_context` | `{ "address": "...", "radiusMeters": 1500 }` | FWS NWI mapped-wetland overlap and nearby polygon evidence. Never a delineation, jurisdictional determination, parcel boundary, or permit decision. |
+| Dated LiDAR availability | `locus_3dep_availability` | `{ "address": "..." }` | National collection dates, USGS project metadata and NC state raster override. Catalog recency does not establish raster vintage. |
 | Elevation and sampled terrain | `locus_terrain_profile` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | USGS EPQS/3DEP elevation plus sampled cardinal terrain profile/slopes. Never a survey, drainage, grading, or engineering conclusion. |
 | Transportation-noise proximity facts | `locus_noise_proximity` | `{ "address": "..." }` or `{ "latitude": 35.22, "longitude": -80.84 }` | Straight-line proximity to public-use airports and mapped major-road/rail centerlines. No decibel estimate or quiet/loud/safe/unsafe label. |
 | Nearby places and amenities | `locus_nearby_places` | `{ "address": "...", "radiusMeters": 800 }` | OpenStreetMap nearby amenities/places with categories, distance, and OSM provenance. |
 | Nearest emergency services and utilities | `locus_public_utilities` | `{ "address": "...", "radiusMeters": 5000 }` | Nearest mapped OpenStreetMap fire station, hospital/clinic, police, fire hydrant, electric substation, and water tower with straight-line distances and counts. Hydrants/infrastructure are often unnamed and still reported. Mapped facility distances only, never a fire-protection rating, insurance determination, or safety verdict. |
 | County Medicare fee-for-service spending | `locus_medicare_spending` | `{ "address": "..." }` | Latest/prior CMS county aggregate: Original Medicare fee-for-service beneficiary count, actual and standardized per-capita payment, and standardized year-over-year change. Not a provider price, individual bill, premium, care-quality/access measure, health inference, score, or property signal. |
+| Prepare satellite area from an address | `locus_satellite_area_prepare` | `{ "address": "1 E Edenton St, Raleigh, NC 27601", "beforeDate": "2024-06-01", "afterDate": "2026-06-01", "halfExtentMeters": 1000 }` | Free request preparation: dated parcel/rooftop centroid, explicit surrounding area box, dimensions and ready `retryInput`. No rendering/payment. Depends on parcel resolution; diagnostics never invent a location. |
+| Official Sentinel-2 scene availability | `locus_satellite_scene_availability` | `{ "bbox": [-79.11, 35.795, -79.098, 35.805], "fromDate": "2024-05-01", "toDate": "2024-06-01", "maxCloudCoverage": 30 }` | Official Copernicus product ids, acquisition times, platform, grid, processing level, and source-published tile cloud cover. Metadata only. A match does not establish visual clarity, site condition, or change. |
 | Aggregate traffic-crash context | `locus_traffic_crash_context` | `{ "address": "...", "radiiMeters": [200, 500, 1000], "lookbackYears": 3 }` | Small-cell-suppressed police-reported crash counts by official severity and mode. Registry coverage: Chicago all-reported, Virginia reportable-threshold, North Carolina nonmotorist and K+A subsets kept separate, Pikes Peak region PPACG reportable-threshold records for 2020-2024, plus nationwide FARS fatal-only fallback. No raw rows, examples, exact points, party details, score, forecast, or place verdict. |
 | Landslide history + susceptibility context | `locus_landslide_context` | `{ "address": "...", "searchRadiusMeters": 1000 }` or `{ "latitude": 35.78, "longitude": -78.64 }` | USGS v3 bounded inventory point/polygon records plus a separately labeled exact source-native n10 90-meter cell where the active snapshot publishes one. Inventory no-match, model out-of-footprint, stale/unavailable snapshot, and source failure remain distinct. The 0–81 model value is not probability or parcel engineering. |
 | FEMA NFIP flood-insurance claims (county) | `locus_nfip_claims` | `{ "address": "..." }` or `{ "latitude": 25.76, "longitude": -80.19 }` | FEMA OpenFEMA NFIP redacted flood-insurance claims aggregated to the county: total claim count, total paid, year range, and top rated flood zones. Redacted (no address/PII), county-level historical fact, never a prediction or risk score. |
@@ -362,6 +436,7 @@ Temporarily degraded national tools may appear in `lanes.degraded` when an upstr
 | Transit stops and routes | `locus_transit_context` | `{ "address": "...", "radiusMeters": 400 }` | Transit stops, routes, shelter/ADA fields, headways where supported. Wired transit agencies span about 15 metros: New York (MTA), Los Angeles (LA Metro), Houston (METRO), Charlotte (CATS), Miami-Dade, Nashville (WeGo), Washington DC (WMATA), Dallas (DART), Philadelphia (SEPTA), Atlanta (MARTA), San Antonio (VIA), Seattle (King County Metro), Phoenix (Valley Metro), Denver (RTD), and Raleigh (GoRaleigh). Other areas return no wired transit lane. |
 | Recent nearby parcel transfers | `locus_parcel_transfers` | `{ "address": "...", "radiusMeters": 1500, "monthsBack": 12 }` | Recorded sales/transfers near the point where parcel-sale sources are wired. |
 | Property-tax rates | `locus_property_tax_rates` | `{ "place": "Wake County, NC" }`, `{ "place": "Nashville, TN" }`, `{ "place": "Austin, TX" }`, or `{ "place": "Tampa, FL" }` | Adopted rate components and jurisdiction basis from official tables where wired: NC statewide plus selected Nashville/Davidson TN, Austin/Travis TX, and Tampa/Hillsborough FL adapters. Other jurisdictions return an official-source prompt pack, not a server-emitted rate number. |
+| Special districts on a Texas tax bill | `locus_special_district_levy` | `{ "address": "..." }` or `{ "latitude": ..., "longitude": ... }` | Texas only. Each special district whose TCEQ water-district boundary contains the point (MUD, WCID, FWSD, SUD, municipal management, drainage, levee and the other TCEQ types) with its type, district id and boundary citation, plus its adopted total, M&O and I&S rates and calculated levy from the Texas Comptroller special-district report, quoted in dollars per $100 of taxable value. Rates stay separate cited line items; nothing is summed and nothing is applied to a property value. Each district carries `rateMatch` (exact, normalized, unmatched) with the strings compared. A failed TCEQ layer returns `source_unavailable`, never an empty district list. Also paid at $0.05 as `locus-special-district-levy`. |
 | Property-tax estimate | `locus_property_tax_estimate` | `{ "address": "..." }` | Estimated annual property tax from assessed value and NC rates where wired. Computed estimates are NC-only; out-of-NC addresses fail closed and may return official-source prompt guidance. Not a valuation. |
 | Paid residential property-tax report | `locus-property-tax` | `POST https://api.locus.report/api/locus-property-tax` with `{ "address": "600 E 4th St, Charlotte, NC" }` | x402-paid residential property-tax artifact: assessed value, annual tax, tax history, effective rate, and provenance from RentCast aggregator records. Commercial or uncovered addresses return `charged:false` diagnostics. Not an official tax bill or valuation. |
 | Tax calendar | `locus_tax_calendar` | `{ "county": "Harris County, TX" }` or `{ "address": "..." }` | State property-tax statutory framework (cited to the state tax code) for NC, TX, CA, FL, NY, plus the official county source pointer and a current-year live-lookup prompt for the volatile per-cycle dates; verified prior-cycle county dates where curated (NC). |
@@ -380,7 +455,8 @@ Temporarily degraded national tools may appear in `lanes.degraded` when an upstr
 | Special valuation screen | `locus_special_valuation_screen` | `{ "address": "..." }` | The parcel's public acreage and land-use code plus cited state special-valuation, historic-incentive, and solar-exemption rows. It does not determine program status for the parcel. |
 | Area reported-crime context | `locus_area_incidents` | `{ "address": "...", "radiusMeters": 1000, "lookbackDays": 365 }` | Area-level or citywide reported-incident context where wired, plus caveats. No safety verdict. |
 | Recent 311 service requests | `locus_service_requests` | `{ "address": "...", "radiusMeters": 1000, "lookbackDays": 365 }` | Recent San Diego Get It Done request type, status, dates, and public location from the synced city feed. A service request is a report, not a verified condition, code violation, responsible-party finding, or complete account of local activity. |
-| Rental registration and housing enforcement | `locus_rental_registration_check` | `{ "address": "1531 Belmont Ave, Seattle, WA 98122" }` | Exact-building registration/license rows and source-specific enforcement components for Minneapolis, Seattle, and New York City. Excludes owner/contact/unit/narrative fields. A no-match is limited to the named datasets, not a compliance finding. |
+| Rental registration, short-term licensing, or building enforcement | `locus_rental_registration_check` | `{ "address": "1531 Belmont Ave, Seattle, WA 98122" }` | Exact-building rows with `recordScope` set to long-term registration, short-term license, or enforcement-only. Excludes owner/contact/unit/narrative fields. A no-match is limited to the named dataset, not a compliance finding. |
+| NYC deed and mortgage index | `locus_nyc_recording_history` | `{ "address": "..." }` or `{ "bbl": "3079740028", "limit": 25 }` | Bounded ACRIS Legals and Master document index, dates, source-published amounts, citations, query horizon, and verify-next questions. No party or unit data and no title conclusion. |
 | Local legislation preview | `locus_local_legislation` | `{ "address": "...", "ownerActions": ["registration_required"], "domains": ["property_tax"] }` | Recent property-relevant legislation preview, status labels, source attribution. Oklahoma City and Las Vegas use PII-safe PrimeGov source pointers: Locus omits unstructured provider titles and the calling agent opens the cited item before describing it. Optional filters select the one headline before the cap. Not legal advice. |
 | Dated changes around one place | `locus_ownership_loop` | `{ "address": "...", "radiusMeters": 1500, "state": "NC", "countyFips3": "183", "zip": "27601" }` | Composite dated-change bundle across available ownership, tax, flood, transfer, and local lanes. |
 | Coastal overlays | `locus_coastal_county_overlays` | `{ "address": "..." }` or `{ "latitude": 34.22, "longitude": -77.88, "county": "auto" }` | Coastal hazard overlays, parcel/address facts, zoning/flood/wetland/resiliency context for supported coastal counties. |
@@ -423,6 +499,75 @@ be worth investigating."
 5. Keep candidates as candidates. Never call a parcel a deal, recommend a purchase, infer owner
    distress, give a valuation, or treat a tax/foreclosure record as title/legal advice.
 
+## Interpretation patterns: turn records into something a person can act on
+
+Locus returns records and arithmetic; the agent turns them into a plain sentence and a next step.
+These three patterns were run live against production on 2026-09-21 (Raleigh, NC). Each one names
+the calls, the join, and the sentence shape. Keep every number cited and never add a value, safety,
+or legal verdict.
+
+### 1. "Did anything change around here?" (large-site imagery plus permits)
+
+1. `locus_satellite_area_prepare { "address": ..., "beforeDate": "2024-06-01", "afterDate": "2026-06-01" }`
+   returns a 2 km context box and `retryInput`. It resolves only exact parcels; a wrong house number
+   returns `status: "unresolved"` with no charge.
+2. `locus_satellite_scene_availability { "bbox": <from retryInput>, "fromDate": ..., "toDate": ... }`
+   lists dated Sentinel-2 scenes with cloud cover (downtown Raleigh: 0 % cloud scenes on
+   2026-01-04, 2026-04-21, 2026-05-19).
+3. `locus_metro_permits { "address": ... }` returns permits within 500 m for the last 12 months with
+   `workclass`, `proposeduse`, `estprojectcost`, `pin`, and street (23 permits in the test).
+4. Keep only permits that could show from above at 10 m: `New Building`, `Addition`, demolition,
+   or a large cost. Interior alterations, repairs, and change-of-use never show. A bounded
+   judgment model (one yes/no per permit) sorted the 23 cleanly: a new school building
+   (BLDNR-009790-2026, $485,812) and a $3.2 M addition at 201 St Marys St scored 0.92 and 0.85;
+   the other 21 scored under 0.4.
+5. Only then buy `POST /api/locus-large-site-satellite-change` ($0.15, Base USDC only, `includeImagery: true`)
+   for the two dated 512 px PNGs. In the test the pair (composites anchored 2024-06-01 and
+   2026-06-01, 30-day windows, cloud under 4 %) showed one large new rooftop in the 2026 image that
+   was absent in 2024; individual buildings and roofs are not readable at 10 m.
+6. Read the pair with the `interpretationGuide` the paid response carries (also summarised
+   here). Request `size: 1024` for the most legible render; it is resampled, not sharper, and
+   learned super-resolution must not be applied because it invents detail. Real change at 10 m is
+   a compact blob at least 30 m across: a new pale patch (building, slab, parking), cleared or
+   graded ground, or a roof that is gone. Thin halos on every building edge are sun angle,
+   shadow, or a one-pixel shift, not change; whole-scene tone shifts are season or atmosphere;
+   speckle on lots and roads is vehicles. Describe each candidate by position and approximate
+   size in metres, then match it to a permit or case; never name a cause, completion state,
+   condition, or value. Vision models are unreliable at this and give leads, not findings; the
+   guide's `modelPrompt` is a ready prompt that enforces observable-only language.
+7. Sentence shape: "Two dated satellite images of the 2 km area around <address> (Jan and May 2026,
+   0 % cloud). Two permits in that window could be visible from above: <permit, use, cost, street>.
+   Sentinel-2 is 10 m per pixel: it shows a new building footprint or cleared land, not a roof or
+   condition." Link the permit source and the Copernicus attribution.
+
+### 2. "Is this building what the record says, and what does the zoning allow?"
+
+1. `locus_parcel_lookup { "address": ... }` gives `landUse`, `landClass`, `yearBuilt`, `heatedAreaSqft`,
+   `acreage`, and the last transfer. Example: 615 Hillsborough St is `SNGL TEN` / Commercial,
+   built 2020, 506 sq ft on 0.07 acres.
+2. `locus_zoning { "address": ... }` gives the district and decode: `DX-12-UG`, Downtown Mixed Use,
+   12-story height limit.
+3. Put the two records side by side and state the gap in words, not dollars. A bounded judgment
+   model over the two records answered "how much more does the district plainly allow" as
+   `much_more` (0.97) for the 506 sq ft building in a 12-story district and `somewhat_more` (0.78)
+   for a 1986 house on R-4 land where accessory units are allowed.
+4. Sentence shape: "The county record shows a one-tenant commercial building of 506 sq ft, built
+   2020. The parcel sits in DX-12-UG, which allows up to 12 stories. That is a large gap between
+   what is there and what the district allows. This is a zoning fact, not a buildability ruling or
+   a value." Add `locus_development_cases` for nearby rezonings if the user is watching the block.
+
+### 3. "Is my tax assessment out of line, and what do I do next?"
+
+One paid call: `POST /api/locus-assessment-position { "address": ..., "noticeDate": optional }` ($0.10).
+No dollar figure is required. It returns the subject's assessed total from the roll, its percentile
+among similar properties within 400 m on the same roll, the appeal deadline rule for the state,
+the filing body and form, and the browser-workflow handoff. It is charged only when the same-roll
+sample is substantive; otherwise it returns a free diagnostic that still carries the deadline rule
+and filing guide. Sentence shape: "Your assessment is $X. Among N similar homes within 400 m on the
+<county> roll it sits at the Pth percentile by total and Qth per square foot. The deadline is
+<rule>. If you appeal, <body> hears it first on <form>. Locus does not say whether to appeal."
+When the owner already has a figure to test, use `locus-valuation-challenge` with `purpose: "protest"` instead.
+
 ## A2A call shape
 
 ```json
@@ -445,17 +590,27 @@ Send broad natural-language requests to your own planner first. Locus expects a 
 
 ## Free REST examples
 
-```bash
-curl https://api.locus.report/tools/list
+Every free tool has its own path: `POST /api/<tool_name>`, flat JSON body. No wallet, no key, no payment challenge, read-only.
 
+```bash
+curl -X POST https://api.locus.report/api/locus_flood_zone \
+  -H 'content-type: application/json' \
+  -d '{"address":"1 E Edenton St, Raleigh, NC 27601"}'
+
+curl -X POST https://api.locus.report/api/locus_place_facts \
+  -H 'content-type: application/json' \
+  -d '{"address":"1 E Edenton St, Raleigh, NC 27601"}'
+```
+
+`POST /tools/call` does the same work with the tool name in the body, which is what you want when the tool is chosen at runtime. Same schemas, same free boundary, same rate limit.
+
+```bash
 curl -X POST https://api.locus.report/tools/call \
   -H 'content-type: application/json' \
   -d '{"name":"locus_lane_availability","arguments":{"place":"1 E Edenton St, Raleigh, NC 27601"}}'
-
-curl -X POST https://api.locus.report/tools/call \
-  -H 'content-type: application/json' \
-  -d '{"name":"locus_place_facts","arguments":{"address":"1 E Edenton St, Raleigh, NC 27601"}}'
 ```
+
+Browse the free catalog with `curl https://api.locus.report/tools/list`; every entry also appears as a `/api/<tool_name>` path in the generated OpenAPI. Keep the two body shapes straight: flat fields for `/api/locus_*`, `{name, arguments}` for `/tools/call`. A flat body sent to `/tools/call` returns `wrapped_body_required` with the correct shape.
 
 ## MCP call pattern
 
@@ -474,10 +629,59 @@ curl -X POST https://api.locus.report/tools/call \
 
 Use the argument key from the tool schema. Do not send every place as `place`; many tools require `address`, `state` plus `county`, or FIPS fields.
 
+<!-- satellite-input-guide:start -->
+### Prepare a satellite imagery purchase
+
+`locus-large-site-satellite-change` is an area-imagery endpoint, not an address report. It does not detect change. Send a flat JSON body to its REST endpoint; do not use the free-tool wrapper for the purchase.
+
+```json
+{"bbox":[-78.68,35.75,-78.60,35.81],"beforeDate":"2024-06-01","afterDate":"2026-06-01","areaLabel":"Raleigh NC site"}
+```
+
+This example box is roughly 48 km² around Raleigh, not a single property. Bounds use WGS84 **longitude, latitude** in `[west, south, east, north]` order. The total area must be 1-100 km², each side at least 500 m, and aspect ratio at most 8:1. Dates are required and `afterDate` must be later than `beforeDate`. Optional `windowDays` is 7-90 (default 30), `size` is 256-1024 (default 512), and `maxCloudCoverage` is 0-60 (default 30). Do not add `address` beside `bbox`; it is unsupported, not a second subject filter.
+
+**Starting with only an address:** use the free preparation tool with your two dates:
+
+```json
+{"name":"locus_satellite_area_prepare","arguments":{"address":"1 E Edenton St, Raleigh, NC 27601","beforeDate":"2024-06-01","afterDate":"2026-06-01","halfExtentMeters":1000}}
+```
+
+Send that wrapper to `POST /tools/call`, or use the tool's arguments through MCP. On `status: "ready"`, inspect `subject` (matched address, parcel ID, centroid precision and source), `area` and `retryInput`. Expanding **1 km in each direction** produces an approximately **2 km × 2 km / 4 km²** box. It is explicitly `centroid_context_box`, not the parcel boundary, and can include neighbouring land. Confirm that scope fits the user's question. Then check that the paid endpoint is in the live catalog and send `retryInput` unchanged as the unpaid purchase POST. Approve a current payment challenge separately. Preparation never renders, signs, pays or proves scene availability.
+
+For manual preparation, free `locus_parcel_lookup` may return `centroid.latitude`, `centroid.longitude`, `centroidPrecision` and `centroidCitation`. Require `centroidCitation` for the coordinate itself, not just a parcel-record citation. Use only an unambiguous resolved parcel/rooftop point without identity/location warnings; never expand a city-level, interpolated or unknown-precision fallback. The preparation tool performs the conversion and validates the resulting limits for you. Unresolved, unavailable or imprecise results contain no `retryInput`; correct the subject or supply an explicit bbox. Check free `locus_satellite_scene_availability` with that same bbox and your acquisition range if you only need catalog metadata.
+
+Meaningful invalid purchase requests return HTTP 400 with `charged:false`, bounded `issues[]` (field paths, codes and correction messages), `requiredFields` and a valid example **before payment or imagery work**. Correct those fields rather than retrying the same request or signing another challenge. GET/HEAD and empty unpaid POST discovery probes still return 402. A 402 probe alone is not proof that a non-empty purchase body is valid.
+
+<!-- satellite-input-guide:end -->
+
+### Skills served over MCP resources
+
+The Locus MCP server also serves its own how-to guidance as MCP **resources**, so
+you get the current version at connect time instead of whatever was installed
+weeks ago. Call `resources/list` and read any whose URI starts with
+`skill://locus/`. They are markdown, and each carries a skill descriptor in
+`_meta["io.modelcontextprotocol/skill"]`.
+
+| Resource | Read it before |
+|---|---|
+| `skill://locus/paying-for-locus` | Your first paid call. Covers the x402 settlement flow, the exact / tempo / Circle Gateway rails, and the charge-gate contract. |
+| `skill://locus/choosing-a-locus-tool` | Picking a tool. Search first, free lanes before paid, and the no-verdict boundary. |
+| `skill://locus/reading-locus-coverage` | Reporting an empty result. Distinguishes `out_of_coverage`, `source_unavailable`, and a genuine empty. |
+| `skill://locus/locus-place-workflow` | Any multi-tool question about a place. The resolve to preflight to fan-out to compose order. |
+
+This follows the draft Skills Extension (SEP-2640), so the capability is
+advertised under `experimental` as `io.modelcontextprotocol/skills`. A client
+that does not know the extension still sees four ordinary markdown resources and
+can read them normally.
+
+These resources are guidance, never authorization. Free, paid, and admin
+separation is enforced server-side on every surface; nothing you read here
+changes what a call is allowed to do.
+
 ## Paid report rules
 
 - Unsupported or discovery-only places return a free diagnostic, not a payment challenge.
-- Most focused tools list between $0.05 and $0.10 USDC. Turnkey-backed composites cost more because their prices include the conservative Pay as You Go signature rate: the flyer is $0.99, solar comparison is $1.09, rental operations is $0.79, and the three-property buyer comparison is $2.49. Free signature allowances are excluded from unit economics. Read the live challenge before payment.
+- Most focused tools list between $0.05 and $0.10 USDC. Turnkey-backed composites cost more because their prices include the conservative Pay as You Go signature rate. Rollout-gated products appear only when configured. Free signature allowances are excluded from unit economics. Read the live challenge before payment.
 - The price, network, asset, and recipient appear before payment.
 - Paid results return only after settlement succeeds.
 - Settled x402 replay returns the stored canonical artifact without another charge. Owner-of-record is an ephemeral paid enrichment: the first settled response and a later replay each fetch the current official field for the same exact verified parcel, with a fresh citation. Canonical replay, public/share/pin/model persist, Stripe, Watch, free, and unpaid remain owner-free. Optional caller context guides presentation only.
@@ -494,6 +698,37 @@ The paid catalog includes native products, promoted free duals, and the seven pa
 4. On every rail, read `amount`, `network`, `asset`, and `payTo` from the live challenge. Ask before signing. Payment is idempotent on the tool plus a canonical argument hash, so replay does not double-charge.
 
 Locus may advertise more than one x402 option in `accepts[]`. Production offers USDC on Base and Solana when both rails are healthy. Choose one complete entry. Never combine the amount or asset from one entry with the network, recipient, or Solana `feePayer` from another entry. Solana clients use the standard `@x402/svm` exact-payment shape; the hosted facilitator verifies, fee-sponsors, and settles the partially signed transaction.
+
+Long-running endpoints may omit Solana because its recent blockhash cannot safely cover a 60-90 second build followed by settlement. `locus-place-report` uses a 180-second Base authorization and does not advertise Solana. Read the live `accepts[]` list instead of assuming every configured network appears on every tool.
+
+### Minimal Base USDC authorization
+
+A live 402 has `{ "x402Version": 2, "resource": { "url": "...", "description": "..." }, "accepts": [{ "scheme": "exact", "network": "eip155:8453", "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "amount": "50000", "payTo": "...", "maxTimeoutSeconds": 300, "extra": { "name": "USD Coin", "version": "2" } }] }`. This is illustrative; use the current complete offer, not these example values.
+
+After explicit spending approval, sign EIP-3009 typed data with domain `{ name: "USD Coin", version: "2", chainId: 8453, verifyingContract: accepted.asset }`, primary type `TransferWithAuthorization`, and these fields in order:
+
+```js
+const types = { TransferWithAuthorization: [
+  { name: "from", type: "address" }, { name: "to", type: "address" },
+  { name: "value", type: "uint256" }, { name: "validAfter", type: "uint256" },
+  { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" }
+] };
+// accepted is one unchanged entry from the live challenge.accepts.
+// authorization: from = signer, to = accepted.payTo, value = accepted.amount;
+// validAfter/validBefore are Unix seconds, bounded by the offer timeout;
+// nonce is a fresh cryptographically random 32-byte hex value.
+const credential = {
+  x402Version: 2,
+  accepted,
+  payload: { signature, authorization: { from, to, value, validAfter, validBefore, nonce } }
+};
+const paymentSignature = btoa(JSON.stringify(credential));
+// Retry the identical POST body with PAYMENT-SIGNATURE: paymentSignature.
+```
+
+Serialize authorization integers as decimal strings. Do not add top-level `resource` or `extensions` to this minimal credential: some facilitator/client combinations reject those optional fields. Copy any description verbatim; Locus keeps paid descriptions ASCII and at most 480 characters. The installed TypeScript x402 client copies `accepted` and `resource` into its v2 payload, so automatic clients may need this slim-envelope compatibility path.
+
+An `insufficient_funds` 402 includes `payer`, `network`, and `amountRequired` (atomic USDC units). Fund that wallet on that network and retry using the fresh challenge. `invalid_signature` and `expired_authorization` require a new signature. A malformed envelope remains `invalid_payload`. None of these responses is a settlement receipt.
 
 ### Probe the challenge without paying
 
@@ -519,7 +754,7 @@ A 402 challenge alone is not proof that end-to-end paid settlement works for you
 
 - **Payments settle on success only.** A non-2xx response never charges you.
 - **Thin data never charges.** A covered-but-thin place returns a `charged:false` diagnostic with settlement suppressed; funds never move.
-- **Settlement failure never returns a paid body.** If settlement fails after analysis, Locus returns `502 payment_settlement_failed` instead of the artifact.
+- **Settlement failure never returns a paid body.** If settlement fails after analysis, Locus returns a retryable 402 for classified payment rejections, or `502 payment_settlement_failed` for other settlement failures, instead of the artifact.
 - **Replays never double-charge.** Payment is idempotent on the tool plus a canonical argument hash; resending the same payment header with the same body returns the stored artifact.
 
 ## Payment security rules
@@ -537,8 +772,15 @@ A 402 challenge alone is not proof that end-to-end paid settlement works for you
 | `402` with a `reason` after paying | The facilitator rejected the payment (wrong network, expired authorization, insufficient funds). | Fix the payment per the reason and re-sign against a fresh challenge. |
 | `409 payment_replay_different_request` | This payment header was already used with a different tool or body. | Sign a new payment for the new request. |
 | `409 payment_processing_retry` | The same payment is mid-execution, usually a concurrent retry. | Wait briefly and resend the identical request. |
-| `502 payment_settlement_failed` | Analysis succeeded but settlement failed; the artifact was withheld. | Resend the identical request with the same payment header to resume settlement and receive the stored artifact. |
+| `502 payment_settlement_failed` | Analysis succeeded but settlement failed; the artifact was withheld. | Follow the response message. `locus-place-report` can resume its stored result when the identical payment remains valid. If the authorization expired, obtain a fresh challenge. Other tools may require a fresh payment. |
 | `200` with `charged: false` | Coverage or data was too thin to charge; you received a free diagnostic. | Follow the diagnostic's suggested free lanes; no funds moved. |
+| `503 rentcast_workflow_state_unavailable` | Locus could not confirm its outbound D1 budget, reservation, or provider-request state. | This attempt did not dispatch a new downstream payment, but an existing reservation may still be in flight. Do not retry until an operator verifies D1 and the outbound execution. |
+| `503 rentcast_challenge_unavailable` | The downstream RentCast x402 challenge was unavailable or invalid. Eligible transport, 403, and malformed cases receive at most one unpaid retry. | Wait, obtain a fresh outer challenge, and retry. No payment-bearing downstream request was dispatched. |
+| `429 rentcast_signer_rate_limited` | Turnkey rate-limited signing or policy-verification requests after bounded retries. | Honor `Retry-After`. Do not report a RentCast outage. |
+| `503 rentcast_signer_unavailable` | Turnkey or the exact signer policy failed before that component paid; the outer payment is withheld. | Check signer health and policy configuration before retrying. |
+| `503 rentcast_upstream_payment_rejected` | The gateway rejected Locus's downstream payment. | Do not replay the payment-bearing request automatically. Check authorization and settlement state, then obtain a fresh outer challenge. |
+| `503 rentcast_upstream_result_unavailable` | Locus sent a payment-bearing downstream request but did not receive a usable confirmed result. | Do not retry automatically. An operator must inspect the outbound execution, provider request, and settlement state first. |
+| `503 rentcast_provider_unavailable` | The downstream provider did not return a confirmed result for another reason. | Do not retry automatically. Check provider health and the outbound execution before using a fresh outer challenge. |
 | `409 clarification_required` | The property-update resolver could not confirm the requested subject or matched a different parcel. | If `retryInput` is present, confirm the matched subject and call again with that object. If absent, ask for a corrected exact address and build a new request. Never resend the original ambiguous body. |
 | `400 property_flyer_claim_rejected` | A specific flyer field or feature violated a pre-payment content rule. | Read `details.rejectedField`, `details.rejectedFeatureIndex` when present, and `details.reason`; rewrite only that item as a factual property condition. |
 | `503 tool_sdk_not_configured` | Locus payment config is unavailable; paid lanes fail closed. | Retry later. Free tools keep working. |
