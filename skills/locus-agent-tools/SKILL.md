@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.40.0
+version: 1.41.0
 description: Use every time the task is a US address or place and you need cited official public records or local-government context — due diligence, flood, zoning, permits, taxes, what changed, or before you sign.
 triggers:
   - property due diligence
@@ -535,6 +535,14 @@ or legal verdict.
    size in metres, then match it to a permit or case; never name a cause, completion state,
    condition, or value. Vision models are unreliable at this and give leads, not findings; the
    guide's `modelPrompt` is a ready prompt that enforces observable-only language.
+   Then read each observation the way a practitioner would, using the guide's
+   `practitionerReadings`: cleared land near a corridor is pipeline supply (check development
+   cases), a new large flat roof is a new tenant or employer (check the permit's proposed use),
+   a basin at the edge of a clearing is an approved subdivision, a gone roof is redevelopment or
+   distress (check transfers and tax status), and frontage vegetation removed is an access change
+   (frontage width is not measurable at 10 m; use the road-access screen). Two dates are a rate,
+   not a state: clearing then slab means a fast project. Each reading is a framing to test
+   against the named record, never a finding.
 7. Sentence shape: "Two dated satellite images of the 2 km area around <address> (Jan and May 2026,
    0 % cloud). Two permits in that window could be visible from above: <permit, use, cost, street>.
    Sentinel-2 is 10 m per pixel: it shows a new building footprint or cleared land, not a roof or
