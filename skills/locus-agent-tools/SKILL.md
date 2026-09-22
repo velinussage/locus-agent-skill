@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.42.0
+version: 1.43.0
 description: Use every time the task is a US address or place and you need cited official public records or local-government context — due diligence, flood, zoning, permits, taxes, what changed, or before you sign.
 triggers:
   - property due diligence
@@ -342,7 +342,7 @@ Use these only after `locus_lane_availability` or the paid index says the call h
 | `POST /api/locus-valuation-challenge` | `$0.10` | Agent wants to stress-test a caller-supplied property price or `source: "assessment_notice"` figure against cited sale, parcel, permit, hazard, tax, zoning, policy, and same-roll assessment-uniformity evidence without Locus creating a price. | Fewer than two substantive cited sections return `charged:false`; uniformity needs at least five same-class parcels to count. |
 | `POST /api/locus-road-access` | `$0.05` | Agent needs nearest mapped public-road proximity from an address/point as an early access screen. | Unresolved address or total source failure returns `charged:false`. Never a legal-access, easement, frontage, or landlocked determination. |
 | `POST /api/locus-assessment-position` | `$0.10` | Owner or agent asks where a tax assessment sits among similar properties on the same roll, the appeal deadline rule, and how to file. No dollar figure required. | Charged only when the same-roll sample is substantive; unresolved address or thin sample returns `charged:false` with the deadline rule and filing guide still attached. Descriptive percentile only; never a determination of over-assessment or advice to appeal. |
-| `POST /api/locus-practitioner-read` | `$0.49` | Agent wants what an experienced land and property analyst reads into the public records for one address: which patterns are present (repeat transfers, permit with no closeout, flood zone next to county claims history, zoning headroom, soil limits, enacted vs pending ordinance), the record that confirms each, and one plain-language summary. Optional `question` sets the audience. | Flat price on every call; an empty reading set is still paid. Readings are framings to test with a named confirming record, never findings; no value, no safe/unsafe, nothing about a person. `partial` names the record Locus does not carry (deed type, parcel-level liens, panel revision history). Unresolved address, engine outage, or a prose guardrail failure returns `charged:false`. |
+| `POST /api/locus-practitioner-read` | `$0.29` | Agent wants what an experienced land and property analyst reads into the public records for one address: which patterns are present (repeat transfers, permit with no closeout, flood zone next to county claims history, zoning headroom, soil limits, enacted vs pending ordinance), the record that confirms each, and one plain-language summary. Optional `question` sets the audience. | Flat price on every call; an empty reading set is still paid. Readings are framings to test with a named confirming record, never findings; no value, no safe/unsafe, nothing about a person. `partial` names the record Locus does not carry (deed type, parcel-level liens, panel revision history). Unresolved address, engine outage, or a prose guardrail failure returns `charged:false`. |
 | `POST /api/locus-power-water-evidence-pack` | `$0.05` | Agent needs pre-development proximity/context from HIFLD/EIA power, EPA public-water-system, and FCC broadband sources. | Missing substantive evidence suppresses charge. Never claims capacity, interconnection, service availability, timing, or cost. |
 | `POST /api/locus-landslide-diligence` | `$0.05` | Agent needs separate USGS documented inventory history and exact source-native n10 model-cell evidence. | Unless both components answer, returns `charged:false`. Never a probability, parcel stability finding, engineering assessment, or safety label. |
 | `POST /api/locus-permit-closeout-check` | `$0.05` | Agent needs exact-subject permit status plus source-published closeout or occupancy-document evidence. Registry coverage: Raleigh, unincorporated Wake County, Durham, Austin, Seattle, Chicago, Los Angeles, and New York City. It accepts an address or up to 25 jurisdiction-scoped `parcelIds`. The coverage label is generated from the source registry. | Uncovered, uncertain, unavailable, unpublished, and no-exact-match states are charge-suppressed. Not condition, compliance, suite/use permission, or closing approval. |
@@ -579,7 +579,7 @@ When the owner already has a figure to test, use `locus-valuation-challenge` wit
 
 ### 4. "What would an experienced analyst read into all of this?"
 
-One paid call: `POST /api/locus-practitioner-read { "address": ..., "question": optional }` ($0.49
+One paid call: `POST /api/locus-practitioner-read { "address": ..., "question": optional }` ($0.29
 flat). Locus fetches its own records (parcel, transfers, zoning, rezonings, permits, flood,
 county flood claims, wetlands, soil, capital projects, legislation, area tax distress,
 assessment position), builds typed facts from them, selects the catalogue readings those facts
