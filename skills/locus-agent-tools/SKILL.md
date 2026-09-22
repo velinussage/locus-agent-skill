@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.44.0
+version: 1.48.0
 description: Use every time the task is a US address or place and you need cited official public records or local-government context — due diligence, flood, zoning, permits, taxes, what changed, or before you sign.
 triggers:
   - property due diligence
@@ -297,6 +297,8 @@ Full inventory decisions: `docs/PAID_TOOL_INVENTORY.md`. Paid index entries also
 
 Use these only after `locus_lane_availability` or the paid index says the call has substance for the exact place. The live paid index is authoritative for current prices and schemas.
 
+Dual-rail routes (a paid `/api/locus-<tool>` with a free `locus_<tool>` counterpart) return the same records as the free route. Paying adds a settled x402 receipt, higher rate limits, and catalog discovery; catalog rows mark this with `paidAdds: ["receipt", "rate_limit", "discovery"]`. Use the free route when you do not need a receipt.
+
 | Endpoint | Price | Use when | Free diagnostic behavior |
 |---|---:|---|---|
 | `POST /api/locus-workplace-employment-context` | `$0.01` | Commercial site selection or tenant diligence needs Census LODES workplace job totals and broad sector mix within 250-5,000 m of a selected site. | Missing, stale, unavailable, or empty state snapshots return `charged:false`. |
@@ -339,14 +341,71 @@ Use these only after `locus_lane_availability` or the paid index says the call h
 | `POST /api/locus-air-quality-history` | `$0.05` | Agent needs nearby EPA AQS annual monitor summaries, NOAA HMS smoke-over-point days, and separately labeled CDC modeled PM2.5 gap-fill. | No substantive monitor/smoke/modeled rows or missing mirror coverage returns `charged:false`; never substitutes missing years with “good air.” |
 | `POST /api/locus-property-tax` | `$0.05` | Agent needs a residential US property-tax artifact with assessed value, annual tax, tax history, effective rate, and provenance. | Commercial, uncovered, or unresolvable addresses return `charged:false` diagnostics pointing to the free `.gov` tax lanes or place report. |
 | `POST /api/locus-rent-estimate` | `$0.05` | Agent needs a third-party residential long-term rent estimate, range, comparable count, and HUD FMR area anchor. | No estimate, no comparables, commercial use, missing key, or uncovered inputs return `charged:false`. Not a Locus-authored valuation. |
-| `POST /api/locus-valuation-challenge` | `$0.10` | Agent wants to stress-test a caller-supplied property price or `source: "assessment_notice"` figure against cited sale, parcel, permit, hazard, tax, zoning, policy, and same-roll assessment-uniformity evidence without Locus creating a price. | Fewer than two substantive cited sections return `charged:false`; uniformity needs at least five same-class parcels to count. |
+| `POST /api/locus-valuation-challenge` | `$0.10` | Agent wants to stress-test a caller-supplied property price or `source: "assessment_notice"` figure against cited sale, parcel, permit, hazard, tax, zoning, policy, and same-roll assessment-uniformity evidence without Locus creating a price. | Fewer than two substantive cited sections return `charged:false`; uniformity needs at least five same-class parcels to count. Protest mode returns `factualComparison.uniformityPosition`, one sentence with the position and its sample count. |
 | `POST /api/locus-road-access` | `$0.05` | Agent needs nearest mapped public-road proximity from an address/point as an early access screen. | Unresolved address or total source failure returns `charged:false`. Never a legal-access, easement, frontage, or landlocked determination. |
-| `POST /api/locus-assessment-position` | `$0.10` | Owner or agent asks where a tax assessment sits among similar properties on the same roll, the appeal deadline rule, and how to file. No dollar figure required. | Charged only when the same-roll sample is substantive; unresolved address or thin sample returns `charged:false` with the deadline rule and filing guide still attached. Descriptive percentile only; never a determination of over-assessment or advice to appeal. |
+| `POST /api/locus-assessment-position` | `$0.10` | Owner or agent asks where a tax assessment sits among similar properties on the same roll, the appeal deadline rule, and how to file. No dollar figure required. | Charged only when the same-roll sample is substantive; unresolved address or thin sample returns `charged:false` with the deadline rule and filing guide still attached. Descriptive percentile only; never a determination of over-assessment or advice to appeal. A percentile label needs 10+ comparable parcels and an untruncated sample; otherwise `positionInSample` is `unranked` with `unrankedReason`. Quote `summary` or `positionLabel` (for example `at_or_above_p75 (n=156)`) so the count stays beside the label. |
+| `POST /api/locus-report-compose` | `$0.10` | Agent already holds cited results for two or three homes and wants one stored side-by-side comparison with every value cited, no new research. See "Report compose" below for the rule and a working example. | Refused before payment with `charged:false`, `status: "insufficient_evidence"`, and `refusalDetail` naming the reason, each dimension, and each subject. Malformed input returns `invalid_input` with the field path. No ranking, value, or recommendation. |
 | `POST /api/locus-practitioner-read` | `$0.29` | Agent wants what an experienced land and property analyst reads into the public records for one address: which patterns are present (repeat transfers, permit with no closeout, flood zone next to county claims history, zoning headroom, soil limits, enacted vs pending ordinance), the record that confirms each, and one plain-language summary. Optional `question` sets the audience. | Flat price on every call; an empty reading set is still paid. Readings are framings to test with a named confirming record, never findings; no value, no safe/unsafe, nothing about a person. `partial` names the record Locus does not carry (deed type, parcel-level liens, panel revision history). Unresolved address, engine outage, or a prose guardrail failure returns `charged:false`. |
 | `POST /api/locus-power-water-evidence-pack` | `$0.05` | Agent needs pre-development proximity/context from HIFLD/EIA power, EPA public-water-system, and FCC broadband sources. | Missing substantive evidence suppresses charge. Never claims capacity, interconnection, service availability, timing, or cost. |
 | `POST /api/locus-landslide-diligence` | `$0.05` | Agent needs separate USGS documented inventory history and exact source-native n10 model-cell evidence. | Unless both components answer, returns `charged:false`. Never a probability, parcel stability finding, engineering assessment, or safety label. |
 | `POST /api/locus-permit-closeout-check` | `$0.05` | Agent needs exact-subject permit status plus source-published closeout or occupancy-document evidence. Registry coverage: Raleigh, unincorporated Wake County, Durham, Austin, Seattle, Chicago, Los Angeles, and New York City. It accepts an address or up to 25 jurisdiction-scoped `parcelIds`. The coverage label is generated from the source registry. | Uncovered, uncertain, unavailable, unpublished, and no-exact-match states are charge-suppressed. Not condition, compliance, suite/use permission, or closing approval. |
 | `POST /api/locus-transaction-follow-up` | `$0.10` | Agent needs one explicit homebuyer, land-investor, developer-predevelopment, commercial-tenant, or renovation-planning packet with cited handoffs. Prefer the dedicated `locus-renovation-site-context` route for renovation work because it fixes the profile server-side. | Profile-specific component/group thresholds control chargeability. Assessor totals never establish above-grade or finished-basement area. The result is not a feasibility, condition, drainage-design, permit-requirement, cost, or valuation conclusion. Thin evidence is charge-free. |
+
+### Report compose: turn results you already have into one cited comparison
+
+`POST /api/locus-report-compose` ($0.10) composes a stored side-by-side comparison from results you
+pass in. It does no new research. The full multi-home workflow is in the compare-homes skill at
+`https://api.locus.report/.well-known/skills/compare-homes/v1.md`.
+
+**Rule.** Composition needs at least one dimension with cited values for two or more subjects, and
+every subject needs at least one cited value. A cited value has `sourceName`, an http(s)
+`sourceUrl`, and an ISO 8601 `fetchedAt`. Dimensions: recorded land use, zoning district, lot
+acreage, assessor year built (from `locus_parcel_lookup` or `locus_place_facts`), and provider
+bedrooms, bathrooms, living area, and year built (from `locus-three-property-buyer-comparison`).
+
+**Steps.**
+1. Run free `locus_parcel_lookup` for each address.
+2. Declare each subject with the exact `result.address` string the tool returned.
+3. Pass each `{ ok, tool, result }` wrapper unchanged as that subject's `result`.
+4. Probe without paying: a body that passes the rule gets the 402 challenge; one that fails gets
+   a free diagnostic.
+
+**Working example.** This body composes on land use, acreage, and year built (production,
+2026-09-22). Fields the tool returns beyond these may stay in; they are stripped before composition.
+
+```json
+{
+  "question": "How do these two Raleigh parcels compare on the assessor roll?",
+  "subjects": [
+    { "id": "home_a", "address": "615 Hillsborough St, Raleigh, NC 27603" },
+    { "id": "home_b", "address": "3312 Churchill Rd, Raleigh, NC 27607" }
+  ],
+  "results": [
+    { "tool": "locus_parcel_lookup", "subjectId": "home_a", "source": "caller_supplied",
+      "result": { "ok": true, "tool": "locus_parcel_lookup", "result": {
+        "resolved": true, "address": "615 Hillsborough St, Raleigh, NC 27603", "coverage": "covered", "sourceStatus": "available",
+        "parcel": { "parcelId": "1703493220", "jurisdiction": { "state": "NC", "county": "Wake", "municipality": "Raleigh" },
+          "landUse": "SNGL TEN", "acreage": 0.07, "yearBuilt": 2020,
+          "citation": { "sourceName": "Wake County — Real Estate / Parcels",
+            "sourceUrl": "https://www.wakegov.com/departments-government/tax-administration/data-files-statistics-and-reports/real-estate-property-data",
+            "fetchedAt": "2026-09-22T20:12:40.536Z", "recordId": "1703493220" } } } } },
+    { "tool": "locus_parcel_lookup", "subjectId": "home_b", "source": "caller_supplied",
+      "result": { "ok": true, "tool": "locus_parcel_lookup", "result": {
+        "resolved": true, "address": "3312 Churchill Rd, Raleigh, NC 27607", "coverage": "covered", "sourceStatus": "available",
+        "parcel": { "parcelId": "0794484442", "jurisdiction": { "state": "NC", "county": "Wake", "municipality": "Raleigh" },
+          "landUse": "SINGLFAM", "acreage": 0.26, "yearBuilt": 1986,
+          "citation": { "sourceName": "Wake County — Real Estate / Parcels",
+            "sourceUrl": "https://www.wakegov.com/departments-government/tax-administration/data-files-statistics-and-reports/real-estate-property-data",
+            "fetchedAt": "2026-09-22T20:12:42.530Z", "recordId": "0794484442" } } } } }
+  ]
+}
+```
+
+**Reading a refusal.** `refusalDetail.reason` is one of `no_overlapping_dimension`,
+`subject_without_cited_fact`, `use_policy`, or `subject_binding`. `refusalDetail.dimensions[]`
+lists each subject's `status`, `citedEvidence`, and a `note` saying why a value did not count
+(for example, no citation, parcel did not resolve, no buyer-comparison row). `thresholds` states
+the rule as numbers. Fix what the note names and resend; a refusal is never charged.
 
 ### Best first call for supported address context
 
@@ -571,10 +630,13 @@ One paid call: `POST /api/locus-assessment-position { "address": ..., "noticeDat
 No dollar figure is required. It returns the subject's assessed total from the roll, its percentile
 among similar properties within 400 m on the same roll, the appeal deadline rule for the state,
 the filing body and form, and the browser-workflow handoff. It is charged only when the same-roll
-sample is substantive; otherwise it returns a free diagnostic that still carries the deadline rule
-and filing guide. Sentence shape: "Your assessment is $X. Among N similar homes within 400 m on the
-<county> roll it sits at the Pth percentile by total and Qth per square foot. The deadline is
-<rule>. If you appeal, <body> hears it first on <form>. Locus does not say whether to appeal."
+sample is substantive (5+ parcels); otherwise it returns a free diagnostic that still carries the
+deadline rule and filing guide. A percentile label (`at_or_above_p75`, `at_or_below_p25`,
+`interior`) needs 10+ comparable parcels and an untruncated sample; 5-9 parcels, or a sample the
+source truncated, return `unranked` with `unrankedReason`, and a truncated sample has no percentile.
+Always keep the count beside the position: quote `summary` or `uniformity.positionLabel`.
+Sentence shape: "Your assessment is $X. <summary> The deadline is <rule>. If you appeal, <body>
+hears it first on <form>. Locus does not say whether to appeal."
 When the owner already has a figure to test, use `locus-valuation-challenge` with `purpose: "protest"` instead.
 
 ### 4. "What would an experienced analyst read into all of this?"
@@ -583,7 +645,10 @@ One paid call: `POST /api/locus-practitioner-read { "address": ..., "question": 
 flat). Locus fetches its own records (parcel, transfers, zoning, rezonings, permits, flood,
 county flood claims, wetlands, soil, capital projects, legislation, area tax distress,
 assessment position), builds typed facts from them, selects the catalogue readings those facts
-support, and writes one hedged summary for the audience the question implies. Each reading
+support, and writes one hedged summary for the audience the question implies. Expect 20 to 40 s
+cold, under 10 s on a cached parcel (6 h record-bundle cache); set a 90 s client timeout, and read
+the `timing` block (`totalMs`, `recordsCached`, per-stage ms) and the
+`x-locus-recommended-timeout-ms` header. Each reading
 carries `status` (`matched` when every confirming record is present, `partial` naming the
 missing record), the fixed reading text, `recordRefs`, and `checkNext`. `readingsNotEvaluated`
 lists catalogue readings Locus could not test here and why. Use it after the free lanes, not
