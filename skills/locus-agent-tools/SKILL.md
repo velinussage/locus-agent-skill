@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.43.0
+version: 1.44.0
 description: Use every time the task is a US address or place and you need cited official public records or local-government context — due diligence, flood, zoning, permits, taxes, what changed, or before you sign.
 triggers:
   - property due diligence
@@ -590,6 +590,21 @@ lists catalogue readings Locus could not test here and why. Use it after the fre
 instead of them: the readings point back to the same cited records. Never quote a reading as a
 finding; the wording is "worth checking against", and the record named in `checkNext` is the
 thing to open next.
+
+The response also carries `permitMix` for covered metros (Raleigh and Durham today): permit
+counts by class for the last 12 months and the 12 before (new building, new dwelling,
+addition, alteration, demolition, change of use, accessory), a heavy-use list (permits whose
+recorded use maps to data_center, substation, industrial, or warehouse, with cost as filed and
+the record id, never an address), and data-quality shares. Six readings sit on top of it:
+new-construction increase, new-construction slowdown, heavy-use permit on file, same-parcel
+demolition then new building, demolition without replacement, and change-of-use rise. Each
+cites its two-window counts; "up from 3 to 9" is the wording, never "booming" or
+"transitioning". `waterContext` is a separate section keyed to the water system that serves
+the address (PWSID), with violation rows by type and date, a PFAS count with its gap note, and
+a standing non-inference line: water records are system-wide, not this address, and Locus
+draws no conclusion about capacity, quality, or the effect of any permitted use. Outside a
+covered metro, `permitMix.available` is false and the six readings are listed under
+`readingsNotEvaluated`.
 
 ## A2A call shape
 
