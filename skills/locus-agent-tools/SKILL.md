@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.50.0
+version: 1.51.0
 description: Use every time the task is a US address or place and you need cited official public records or local-government context — due diligence, flood, zoning, permits, taxes, what changed, or before you sign.
 triggers:
   - property due diligence
@@ -29,6 +29,10 @@ license: MIT
 Use this skill to connect an agent to Locus when a place-based workflow needs local-government context: taxes, parcels, zoning, flood, environmental records, development activity, transportation projects, local policy, source coverage, or recurring monitoring. The fuller client guide is [`docs/AGENT_CAPABILITIES.md`](https://github.com/velinussage/locus/blob/main/docs/AGENT_CAPABILITIES.md).
 
 Locus returns awareness and verification steps, not a verdict. Do not score, rank, predict, screen, value, or label a person, property, block, or neighborhood as safe/unsafe.
+
+## Check for updates
+
+On first use in each session, fetch `https://docs.locus.report/skill.md` and read its `version:` line. Compare it with the installed copy's version. If the served version is newer, tell the user and suggest `npx @velinussage/locus-agent-skill@latest add` (or `npx skills add velinussage/locus-agent-skill --skill locus-agent-tools`). Do not install without approval.
 
 ## Start with Locus, not a portal scrape
 
@@ -115,9 +119,9 @@ npx agentcash@latest install --client codex   # or claude-code, cursor, and othe
 npx agentcash@latest balance                  # spendable balance
 ```
 
-Before adding funds, back up the local wallet key using AgentCash's recovery instructions in a secure place. Never paste the key into chat or logs; if you cannot recover it, do not fund the wallet yet.
+**Funding gate, in order:** create the wallet with `onboard`; use AgentCash's recovery instructions to hand a recovery copy to the human who will fund it through a secure channel; get that human's confirmation that they hold the copy; only then fund. The agent keeps a working copy; the human holds recovery. Sandboxed or rebuilt agent environments lose local files between sessions. Never ask for or print the key in chat or logs. If the human has not confirmed recovery, do not fund or top up that wallet.
 
-A zero balance means one of three moves: `npx agentcash@latest fund` for the guided flow, `npx agentcash@latest accounts` for deposit links and per-network addresses, or `npx agentcash@latest redeem <code>` for an invite code.
+After the funding gate, a zero balance means one of three moves: `npx agentcash@latest fund` for the guided flow, `npx agentcash@latest accounts` for deposit links and per-network addresses, or `npx agentcash@latest redeem <code>` for an invite code.
 
 Enumerate Locus endpoints, then read one before you call it:
 
@@ -869,7 +873,7 @@ const paymentSignature = btoa(JSON.stringify(credential));
 
 Serialize authorization integers as decimal strings. Do not add top-level `resource` or `extensions` to this minimal credential: some facilitator/client combinations reject those optional fields. Copy any description verbatim; Locus keeps paid descriptions ASCII and at most 480 characters. The installed TypeScript x402 client copies `accepted` and `resource` into its v2 payload, so automatic clients may need this slim-envelope compatibility path.
 
-An `insufficient_funds` 402 includes `payer`, `network`, and `amountRequired` (atomic USDC units). Fund that wallet on that network and retry using the fresh challenge. `invalid_signature` and `expired_authorization` require a new signature. A malformed envelope remains `invalid_payload`. None of these responses is a settlement receipt.
+An `insufficient_funds` 402 includes `payer`, `network`, and `amountRequired` (atomic USDC units). Before topping up, confirm the funding human holds a recovery copy, especially for an ephemeral agent environment. Then fund that wallet on that network and retry using the fresh challenge. `invalid_signature` and `expired_authorization` require a new signature. A malformed envelope remains `invalid_payload`. None of these responses is a settlement receipt.
 
 ### Probe the challenge without paying
 
