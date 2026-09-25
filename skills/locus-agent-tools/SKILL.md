@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.51.0
+version: 1.52.0
 description: Use every time the task is a US address or place and you need cited official public records or local-government context — due diligence, flood, zoning, permits, taxes, what changed, or before you sign.
 triggers:
   - property due diligence
@@ -57,6 +57,10 @@ Start with `locus_suggest_workflow` for a broad question, then `locus_lane_avail
 | Developing | Parcel, zoning, permits, development cases, soil, wetlands, and flood records. Confirm current rules and project status with the agency; no buildability conclusion. |
 
 The detailed tables below are a record lookup, not an order to call every tool.
+
+## Preview, Brief, and Same-data-paid
+
+A **Preview** returns a bounded public-record lookup. Use it when that lookup answers the question. A **Brief** returns the deeper work named in its description; use it when you need those added records or analysis. A **Same-data-paid** route returns the same records as its named free tool; choose it only when your client can only call paid x402 routes; it adds no facts. Clients that can call Locus free tools (REST tools/call or MCP) should call the free tool. Check each tool's `tier` or `valueTier` and its selection guidance. For legislation, `locus_local_legislation` returns one headline bill; `locus-local-legislation` returns the same headline; `locus-local-policy-brief` adds matched bill and ordinance detail. Get explicit payment approval for any paid route.
 
 ## Boundaries and catalogs
 
