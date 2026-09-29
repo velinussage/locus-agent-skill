@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.52.0
+version: 1.53.0
 description: Use every time the task is a US address or place and you need cited official public records or local-government context — due diligence, flood, zoning, permits, taxes, what changed, or before you sign.
 triggers:
   - property due diligence
@@ -13,6 +13,8 @@ triggers:
   - one address solar screen
   - renovation site context
   - large site satellite change
+  - check a listing or notice against the county record
+  - kill list of candidate sites
   - property tax
   - before you sign
   - what changed at this address
@@ -22,6 +24,7 @@ triggers:
   - a2a locus
 allowed-tools: Bash Read AskUserQuestion
 license: MIT
+contentHash: 9a6d061293af
 ---
 
 # Locus Agent Capabilities
@@ -299,6 +302,8 @@ Route these first when the buyer already knows the property or shortlist:
 4. **Rental registration, short-term license, or building enforcement:** use free `locus_rental_registration_check` for an exact building. Read `recordScope` before interpreting the result. Long-term registration is wired in Minneapolis, Montgomery County, New York City, and Seattle. Denver is short-term-license only. Kansas City is building-enforcement only and cannot answer whether a rental registration exists. Agent-commerce callers may use the identical `$0.01` REST dual. Never turn a row or no-match into legal permission, compliance, habitability, or a person judgment.
 5. **NYC deed and mortgage index:** use free `locus_nyc_recording_history` with one NYC address or exact 10-digit BBL. It joins ACRIS Legals to ACRIS Master and returns bounded document ids, types, dates, source-published amounts, and citations without party or unit data. The `$0.01` REST dual is identical. It is not a title, lien, payoff, ownership, priority, validity, or insurability conclusion.
 6. **Rental-registration portfolio:** use `locus-record-batch` at `$0.05` with 2-25 exact addresses and `lanes: ["locus_rental_registration_check"]`. One async job returns results keyed by address. Addresses outside the current source registry remain explicit out-of-coverage items; do not treat them as unregistered.
+7. **A listing, assessment notice, or inspection excerpt you want held against the county record:** use `locus-listing-claim-check` at `$0.25` (one address) or `locus-listing-claim-batch` at `$0.65` (2-3 addresses in one settlement). Paste the document text or pass structured claims; each address is one `subject` with a `mode` of `listing`, `assessment_notice`, or `inspection_excerpt`, and each mode takes only its own field (`claims` or `listingText`; `noticeText`; `inspectionText`, 10-20,000 characters). It compares building area, year built, permit references, and notice values with the parcel and exact-address permit record and shows each match, difference, or ambiguity with a dated citation. It is x402-only, and a result with no cited evidence is `charged:false`. Limits to say out loud: it cannot check rent rolls, leases, offering-memorandum (OM) figures, NOI, or any number no public record publishes; an area is compared only when the text names the same definition (heated, gross, and so on); an assessor year built can be an effective year; and a difference is a question to verify, not a finding that anyone misstated anything. If the address matches a lot recorded under a different house number, the tool returns `identity: unresolved` and does not charge.
+8. **Kill-list before spending time on a candidate list:** see "5. Which candidate sites can I drop early?" below.
 
 These products return `nextCalls[]` instead of a prose narrative. Each call includes the exact `tool`, ready `input`, one-sentence `why`, supporting `evidenceIds`, `cost`, `urgency`, endpoint, and `requiresPaymentApproval`. `cost` is `free` or the exact dollar price from Locus's central price registry when the workflow was generated. `costAtGeneration` remains an identical compatibility alias. `nextCallPlan.pricedAt` timestamps the price snapshot; the next tool's live challenge remains authoritative. A small model may select and order only server-built candidate IDs. Locus owns and validates every returned tool name, argument object, price snapshot, evidence link, and payment flag. Model failure uses the deterministic candidate order. A paid next call is never executed without separate approval.
 
@@ -311,7 +316,6 @@ The three RentCast workflows already use Turnkey to buy from the RentCast x402 g
 | Free snapshot | `locus_place_facts` (free) | Paid dual of the same |
 | Pre-sign parcel + trend + policy | `locus-before-you-sign` ($0.07) | Three separate briefs |
 | Owner programs, dates, appeal/tax rules, and parcel screens | `locus-owner-action-brief` ($0.05) | Six separate owner-action lanes |
-| Neighbors, topology, multi-lane surrounding evidence | `locus-surrounding-area-analysis` ($0.10) ± report ($0.15) | `locus-ownership-loop` alone or many micro duals |
 | EPA proximity bundle | `locus-environmental-context` ($0.05) | Parallel toxic/RCRA/water duals |
 | Compiled place artifact | `locus-place-report` ($0.05) | Stitching free tools into a fake report |
 | Recent official change + media | `locus-property-update` ($0.10) | Flyer first |
@@ -324,6 +328,8 @@ The three RentCast workflows already use Turnkey to buy from the RentCast x402 g
 | Review owner costs and deadlines | `locus-owner-cost-review` ($0.25) | Inferring why taxes changed or treating a program as eligibility |
 | Review rental property operations | `locus-rental-operations-brief` ($0.79) | Raw rent estimates without HUD, permit, tax, market, work items, or ready next calls |
 | Check municipal rental registration | `locus_rental_registration_check` (free) or `locus-rental-registration-check` ($0.01) | Treating a source row or no-match as legal permission, compliance, habitability, or a landlord judgment |
+| Hold a listing, notice, or inspection excerpt against the county record | `locus-listing-claim-check` ($0.25) or `locus-listing-claim-batch` ($0.65, 2-3 addresses) | Asking a model to "verify" the numbers from memory, or treating a difference as a misstatement; rent rolls, leases, and OM figures are outside any public record |
+| Drop weak candidate sites early | `locus-record-batch` ($0.05) with free lanes (see the kill-list pattern) | Ranking or scoring sites, or reading a lane with no flag as a good site |
 
 Full inventory decisions: `docs/PAID_TOOL_INVENTORY.md`. Paid index entries also carry `seeAlso` for overlap routing.
 
@@ -344,8 +350,8 @@ Dual-rail routes (a paid `/api/locus-<tool>` with a free `locus_<tool>` counterp
 | `POST /api/locus-electricity-context` | `$0.01` | Data-center, industrial, energy-development, or power-sensitive site screens need HIFLD line proximity plus EIA state price context before utility diligence. | An unresolved point or failure of both source components returns `charged:false`. |
 | `POST /api/locus-insurance-context` | `$0.05` | An insurance question on one address: the parcel FEMA zone with the federal purchase-requirement rule, NFIP policy-cost distribution for the ZIP, ACS homeowners-insurance cost bands, and a county rebuild proxy, in one call. Estimates with vintages, never a quote. | `charged: false` when the point does not resolve or no section returns data. |
 | `POST /api/locus-record-batch` | `$0.05` | A portfolio or any-jurisdiction screen needs up to 6 free record lanes across 2-25 addresses as ONE async job keyed by address; poll `statusUrl`. | Unresolved addresses are listed and never charged; `charged: false` when no address resolves or no valid lane is named. |
-| `POST /api/locus-surrounding-area-analysis` | `$0.10` | Buyer needs one stored multi-lane surrounding packet: topology-aware parcels, zoning, development, permits, legislation, capital/transport, environmental baseline, optional aerial. | Unstable subject, missing surrounding-parcel foundation, or under two completed components returns `charged:false`. |
-| `POST /api/locus-surrounding-area-report` | `$0.15` | HTML+PDF upgrade of an active surrounding-area packet within the 24h upgrade window. | Invalid/expired proof, second report, or render failure does not charge. |
+| `POST /api/locus-listing-claim-check` | `$0.25` | Agent has one address and pasted listing, assessment-notice, or inspection text (or structured claims) to hold against the parcel and permit record. Body: `{"subjects":[{"id":"subject_a","address":"...","mode":"listing","listingText":"..."}]}`. | `charged: false` without cited evidence or when the address does not resolve to one parcel with the requested house number; the document text is never stored or shown. |
+| `POST /api/locus-listing-claim-batch` | `$0.65` | Same, for 2-3 subjects in one settlement. | Billing is binary: `charged: false` unless every subject produced cited evidence. |
 | `POST /api/locus-place-report` | `$0.05` | Agent needs one compiled cited property-context artifact for an address or ZIP. The artifact confirms the matched subject, lists every source, and carries an honest coverage ledger. After confirmed x402 settlement or seller-escrow, the paid parcel-financials lane may include the assessor owner-of-record name for the same exact parcel (cited, not a contact). Canonical storage stays owner-free; settled replay refreshes the official field. | Unsupported or discovery-only places return no-charge diagnostics. |
 | `POST /api/locus-property-update` | `$0.10` | Agent needs an async exact-address decision check of recent or scheduled official-record changes, nearby activity, and physical comparability, with a shareable report, PDF, and temporary video. | Ambiguous, thin, or unsupported inputs return `charged:false`; on `clarification_required`, confirm and resend `retryInput`. Poll the job and, once `flyerReady:true`, use `flyerHandoff` immediately without waiting for video. |
 | `POST /api/locus-solar-property-comparison` | `$1.09` | Agent has exactly three known addresses and wants parcel-bound, dated Google Solar roof metrics beside utility candidates, cited solar-program rows, and one shared GridPulse reference. Input: `{ "addresses": ["...", "...", "..."], "financialZip": "27312", "systemKw": 8 }`. Results stay in input order for side-by-side review; Locus does not select a winner or recommend a property. | Fewer than two attributable Google Solar results return `charged:false`. The price includes up to four Turnkey signatures at the conservative Pay as You Go rate. GridPulse figures remain historical context. Licensed provider data is private, `no-store`, and excluded from public pinning. x402 only. |
@@ -692,9 +698,13 @@ text itself is never echoed in the response). Not every
 catalogue reading can fire today: the `catalogue` block says how many readings are currently
 evaluated and how many are gated off pending a slot adapter or confirming-record fetch
 (`readingsNotEvaluated` lists those, with reasons). Expect 20 to 40 s
-cold, under 10 s on a cached parcel (6 h record-bundle cache); set a 90 s client timeout, and read
-the `timing` block (`totalMs`, `recordsCached`, per-stage ms) and the
-`x-locus-recommended-timeout-ms` header. Each reading
+cold, under 10 s on a cached parcel (6 h record-bundle cache); allow at least 60 seconds,
+set a 90 s client timeout, and honor the `x-locus-recommended-timeout-ms` header.
+If disconnected, retry the same request for the same payer with fresh valid payment within
+15 minutes: the finished result is held for reuse, but is never returned without valid
+payment. The disconnected run is not charged; the retry settles once after delivery.
+A different request or payer cannot reuse that result. Read the `timing` block (`totalMs`,
+`recordsCached`, per-stage ms). Each reading
 carries `status` (`matched` when every confirming record is present, `partial` naming the
 missing record), the fixed reading text, `recordRefs`, and `checkNext`. `readingsNotEvaluated`
 lists catalogue readings Locus could not test here and why. Use it after the free lanes, not
@@ -716,6 +726,18 @@ a standing non-inference line: water records are system-wide, not this address, 
 draws no conclusion about capacity, quality, or the effect of any permitted use. Outside a
 covered metro, `permitMix.available` is false and the six readings are listed under
 `readingsNotEvaluated`.
+
+### 5. "Which candidate sites can I drop early?" (kill-list, not a ranking)
+
+Use this when the user holds a list of 2-25 candidate addresses (land, teardowns, small commercial) and wants to stop spending time on sites that a public record already rules out for their use.
+
+1. Ask for the one or two hard filters the user already has (for example "not in a mapped flood zone", "no mapped wetlands on the point", "zoning must allow my use class"). Do not invent filters and do not weight them.
+2. Submit the list once: `locus-record-batch { "addresses": [...], "lanes": ["locus_parcel_lookup", "locus_zoning", "locus_flood_zone", "locus_wetland_context"] }` (up to 6 free lanes; add `locus_tax_distress` or `locus_soil_context` only if the user asked). Poll `statusUrl`.
+3. For each address, read the lanes and list only records that touch a stated filter, each with its citation and date. Example line: "Mapped in a FEMA flood zone at the point (FEMA NFHL, fetched 2026-09-29): verify the parcel boundary and elevation before dropping or keeping."
+4. Split the answer into three lists: **has a record that touches your filter**, **no such record found in the lanes checked**, and **could not check** (lane error, unresolved address, out of coverage). Never merge the last two; a lane with no flag is not a good site.
+5. Confirm identity before trusting a parcel lane: the parcel address returned should carry the candidate's house number. A point match can land on a neighboring lot.
+6. If a candidate came with a listing or offering text, run `locus-listing-claim-check` on the few survivors to hold its area, year built, and permit claims against the record. Rents, leases, and OM numbers stay unchecked.
+7. Say what this is not: no score, no rank, no "best site", no buildability, value, or use approval. The user makes the keep-or-drop call.
 
 ## A2A call shape
 
