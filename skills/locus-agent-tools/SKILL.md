@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.53.0
+version: 1.56.0
 description: Use every time the task is a US address or place and you need cited official public records or local-government context — due diligence, flood, zoning, permits, taxes, what changed, or before you sign.
 triggers:
   - property due diligence
@@ -24,7 +24,7 @@ triggers:
   - a2a locus
 allowed-tools: Bash Read AskUserQuestion
 license: MIT
-contentHash: 9a6d061293af
+contentHash: bff0ffdec031
 ---
 
 # Locus Agent Capabilities
@@ -72,7 +72,7 @@ A **Preview** returns a bounded public-record lookup. Use it when that lookup an
 - **Start with `locus_place_facts` when lane availability says it is available.** It is the one-call address bundle for supported parcel areas: parcel facts, FEMA flood zone, governing districts, transportation context, and tax context where wired.
 - **Use `locus_lane_availability` before paid calls.** Summary mode gives a short native-product shortlist. Use `detailLevel: "full"` or the paid index for exact paid-only atomic buy signals.
 - **Treat partial trend coverage as a check-first signal.** `supported_partial` trend places appear in `lanes.varies` with low paid substance; buy `locus-local-trend-brief` only when `buyRecommendations[].substanceHere` is `medium` or better. Thin exact-radius results can return a `charged:false` data-sufficiency diagnostic instead of a paid brief.
-- **The paid catalog mixes native paid tools, promoted dual-rail routes, and paid-only atomic routes.** Read `GET /.well-known/locus-tools.json` for the current set and count. Rollout-gated tools appear in the live catalog only when configured. Six paid-only atomics cost $0.01: `locus-workplace-employment-context`, `locus-wikimedia-commons-area-context`, `locus-wikipedia-place-context`, `locus-pfas-occurrence`, `locus-nei-emissions-nearby`, and `locus-electricity-context`. The paid-only `locus-evaluation-packet` costs $0.35. They use x402 over REST and have no free underscore, MCP, or A2A counterpart. Read the live challenge for exact price, chain, asset, recipient, and schema before payment.
+- **The paid catalog mixes native paid tools, promoted dual-rail routes, and paid-only atomic routes.** Read `GET /.well-known/locus-tools.json` for the current set and count. Rollout-gated tools appear in the live catalog only when configured. Six paid-only atomics cost $0.01: `locus-workplace-employment-context`, `locus-wikimedia-commons-area-context`, `locus-wikipedia-place-context`, `locus-pfas-occurrence`, `locus-nei-emissions-nearby`, and `locus-electricity-context`. The paid-only `locus-legistar-property-meetings` costs $0.05. The paid-only `locus-evaluation-packet` costs $0.35. They use x402 over REST and have no free underscore, MCP, or A2A counterpart. Read the live challenge for exact price, chain, asset, recipient, and schema before payment.
 - **Never plan against a count written in this guide.** This file is installed on disk and cannot track tools as they land, so it states no catalog totals. `GET /tools/list` (free rail) and `GET /.well-known/locus-tools.json` (full catalog) are the only authorities for what exists, what it costs, and what is enabled for a given deployment.
 - **Paid reports are async-grade, not click-and-wait.** A full `locus-place-report` takes 60-120 seconds; set a 120-second client timeout. A failed call (502/503 or timeout) is never charged: settlement only runs after the artifact is ready, so retrying is safe. For unattended runs use `locus-place-report-batch` (one settlement, poll the job) instead of tight synchronous retries.
 - **For an owner revaluation, start free.** Check `locus_tax_calendar` and `locus_appeal_filing_guide` before a supported tax estimate. Use `locus_appeal_window` for deadline arithmetic when the notice date is known. Consider paid follow-ups only for a remaining question, after approval; do not advise whether to appeal.
@@ -151,7 +151,7 @@ Install the Locus skill separately with `npx @velinussage/locus-agent-skill@late
 
 Read the live challenge and ask before every payment. Keep the settlement receipt.
 
-For broad requests, start with the current bundles in the top-agent manifest. For exact lanes, use the full catalog. A paid entry has a free underscore route only when it publishes `dualFreeTool` or a free `counterparts[]` entry. The seven paid-only atomics do not. Free executor names use underscores (`locus_zoning`); paid REST slugs use hyphens (`locus-zoning`). Execute the entry's exact `callName`.
+For broad requests, start with the current bundles in the top-agent manifest. For exact lanes, use the full catalog. A paid entry has a free underscore route only when it publishes `dualFreeTool` or a free `counterparts[]` entry. Paid-only atomics do not. Free executor names use underscores (`locus_zoning`); paid REST slugs use hyphens (`locus-zoning`). Execute the entry's exact `callName`.
 
 The live catalogs are authoritative for tool names, schemas, prices, and endpoints. Do not copy stale tool definitions into prompts.
 
@@ -203,7 +203,7 @@ When the buyer wants more than the free `locus_surrounding_parcels` primitive an
 3. **Resolve the exact place first.** Call `locus_coverage_check` and `locus_lane_availability` with the exact user string. Compare the resolved jurisdiction to any user-supplied city/county/state.
 4. **For a broad address question, call `locus_place_facts` first if available.** It often replaces several separate calls. If lane availability marks it not covered, fall back to national free tools or parcel-only mode.
 5. **For local depth, check availability for the exact place.** Follow the lane's `access` value. A paid-only `varies` lane still needs approval, but returns `charged:false` when it cannot provide substantive data.
-6. **Run the smallest tool by intent.** Use each transport's own catalog. The seven paid-only atomics use `POST /api/<hyphenated-slug>` over REST.
+6. **Run the smallest tool by intent.** Use each transport's own catalog. Paid-only atomics use `POST /api/<hyphenated-slug>` over REST.
 7. **Ground every fact.** Check the returned state, county, municipality, and data vintage against the question before using a record. Mark mismatches or old layers as such, not current facts. Include source names, links or locators, fetched timestamps where present, and caveats.
 8. **Pay only on explicit authorization.** A paid tool returns an x402 challenge. Show price, chain, recipient, and tool, then retry only after the user approves.
 9. **Follow property-update diagnostics exactly.** On `409 clarification_required`, inspect the response before retrying. If `retryInput` is present, ask the user to confirm the matched subject and then resend that object as the next request. If `retryInput` is absent, ask the user for a corrected exact address and construct a new request from it. Never resend the original ambiguous address. On `insufficient_current_context`, use the returned wider radius or choose one of `alternativeTools`; those alternatives are separate paid calls and still require their own preflight and authorization.
@@ -531,10 +531,12 @@ Temporarily degraded national tools may appear in `lanes.degraded` when an upstr
 
 | The question | Tool | Exact arguments | What it returns |
 |---|---|---|---|
-| Zoning district and overlays | `locus_zoning` | `{ "address": "..." }` or `{ "latitude": 35.78, "longitude": -78.64 }` | Governing zoning district, overlays/planning context where wired, source links. Rich coverage only in wired jurisdictions. |
+| Zoning district and overlays | `locus_zoning` | `{ "address": "..." }` or `{ "latitude": 35.78, "longitude": -78.64 }`; optional `{ "address": "<NYC street address>", "requestedUse": "restaurant" }` | Mapped district and overlays. If the requested-use pilot is enabled, NYC only: reviewed base-district rule excerpt and a parcel-specific question for `restaurant`, `cafe`, or `detached single family home`. Other uses return `use_not_mapped`; this is never a permission or buildability verdict. |
+| Exact-parcel code complaints, cases, and violations | `locus_parcel_code_cases` | NYC: `{ "bbl": "5000080019" }` or `{ "address": "<NYC street address>" }`; San Francisco: `{ "jurisdiction": "us-ca-san-francisco", "parcelId": "6311024E" }`; Austin: `{ "jurisdiction": "us-tx-austin", "parcelId": "<Travis parcel id>" }`; unincorporated Wake County: `{ "address": "<street address>" }` | Opt-in per source, default off. Each source has its own scope: NYC HPD housing-maintenance violations; SF Building Inspection complaints plus issued notices of violation (a complaint is not a violation); Austin code complaint cases (not confirmed violations); Wake County cases opened in the last 90 days, matched by street address verified against the parcel site address (not an exact-parcel match; Raleigh and other towns excluded). Returns up to 50 rows per source dataset (SF up to 50 each), no names, units, or narratives. No match is limited to that dataset, not a compliance finding. Other places return `out_of_coverage`; use `locus_request_coverage`. |
+| Surrounding parcel context | `locus_surrounding_parcels` | `{ "address": "1 E Edenton St, Raleigh, NC 27601", "radiusMeters": 500, "maxParcels": 50 }` | Free source-native parcel topology where the release gate is active, plus bounded centroid-distance rings in supported parcel areas. Use it to identify nearby parcels, not to infer violations or ownership. Use `locus_parcel_code_cases` separately for a supported subject's code-case records; those cases do not describe every surrounding parcel. A 100 m or 200 m request does not cover the full 250 m ring. |
 | Development or rezoning nearby | `locus_development_cases` | `{ "address": "...", "radiusMeters": 1500 }` | Nearby development/rezoning case records, statuses, dates, identifiers, citations where wired. |
 | Public capital projects nearby | `locus_capital_projects` | `{ "address": "...", "radiusMeters": 1609 }` | Government capital projects, public works, assessments where wired, with project ids and source links. |
-| Building permits for a place, parcel set, or supported metro | `locus_metro_permits` | Exact project: `{ "parcelIds": ["0736544606", "0736845188"], "state": "NC", "county": "Wake" }`; point mode: `{ "city": "chicago", "latitude": 41.878, "longitude": -87.629, "radiusMeters": 1000, "sinceDate": "2025-01-01" }` | Exact subjects resolve through the parcel before source selection. Unincorporated Wake County returns Tyler EnerGov permit, plan, and inspection workflow fields. Verified point-radius metros come from the executable metro registry. Exact parcel requests never fall back to the Census residential county trend. |
+| Building permits for a place, parcel set, or supported metro | `locus_metro_permits` | Exact address: `{ "place": "1 E Edenton St, Raleigh, NC 27601" }`; parcel set: `{ "parcelIds": ["0736544606", "0736845188"], "state": "NC", "county": "Wake" }`; point mode: `{ "city": "chicago", "latitude": 41.878, "longitude": -87.629, "radiusMeters": 1000, "sinceDate": "2025-01-01" }` | Free permit activity lookup. Exact subjects resolve through the parcel before source selection. Unincorporated Wake County returns Tyler EnerGov permit, plan, and inspection workflow fields. Verified point-radius metros come from the executable metro registry. Exact parcel requests never fall back to the Census residential county trend. |
 | Transportation projects and traffic counts | `locus_transportation_context` | `{ "address": "...", "radiusMeters": 2000 }` | State DOT funded projects, traffic-count stations, routes, statuses where wired. |
 | Public water/sewer service-area screen | `locus_utility_service_check` | `{ "address": "..." }` | Whether the point falls inside mapped public water and sewer service-area polygons where county sources are wired, with provider names when safely published. Polygon membership does not prove service availability, capacity, connection rights, timing, or cost for a parcel. |
 | Transit stops and routes | `locus_transit_context` | `{ "address": "...", "radiusMeters": 400 }` | Transit stops, routes, shelter/ADA fields, headways where supported. Wired transit agencies span about 15 metros: New York (MTA), Los Angeles (LA Metro), Houston (METRO), Charlotte (CATS), Miami-Dade, Nashville (WeGo), Washington DC (WMATA), Dallas (DART), Philadelphia (SEPTA), Atlanta (MARTA), San Antonio (VIA), Seattle (King County Metro), Phoenix (Valley Metro), Denver (RTD), and Raleigh (GoRaleigh). Other areas return no wired transit lane. |
@@ -561,6 +563,8 @@ Temporarily degraded national tools may appear in `lanes.degraded` when an upstr
 | Recent 311 service requests | `locus_service_requests` | `{ "address": "...", "radiusMeters": 1000, "lookbackDays": 365 }` | Recent San Diego Get It Done request type, status, dates, and public location from the synced city feed. A service request is a report, not a verified condition, code violation, responsible-party finding, or complete account of local activity. |
 | Rental registration, short-term licensing, or building enforcement | `locus_rental_registration_check` | `{ "address": "1531 Belmont Ave, Seattle, WA 98122" }` | Exact-building rows with `recordScope` set to long-term registration, short-term license, or enforcement-only. Excludes owner/contact/unit/narrative fields. A no-match is limited to the named dataset, not a compliance finding. |
 | NYC deed and mortgage index | `locus_nyc_recording_history` | `{ "address": "..." }` or `{ "bbl": "3079740028", "limit": 25 }` | Bounded ACRIS Legals and Master document index, dates, source-published amounts, citations, query horizon, and verify-next questions. No party or unit data and no title conclusion. |
+| Government planning meeting pointers | `locus_government_meetings` | `{ "jurisdiction": "us-ca-modesto" }` or `{ "jurisdiction": "us-nc-wake" }` | Free bounded Modesto Planning Commission and Wake County Planning Board dates and official links. No item extraction, parcel match, or final decision. |
+| Property-topic government agenda leads | `locus-legistar-property-meetings` | Paid x402 `POST /api/locus-legistar-property-meetings` with `{ "jurisdiction": "us-nc-chatham" }` | Five verified Legistar jurisdictions: Chatham County, Chapel Hill, Mecklenburg County, Denver, Seattle. $0.05 on a substantive result; inspect the live challenge and get payment approval first. A 30-minute cached scan inspects up to 10 meetings and 25 items per meeting in the requested month and returns generic topic labels with official links, not raw titles. A lead is not a parcel match, complete agenda, current meeting status, or final decision. |
 | Local legislation preview | `locus_local_legislation` | `{ "address": "...", "ownerActions": ["registration_required"], "domains": ["property_tax"] }` | Recent property-relevant legislation preview, status labels, source attribution. Oklahoma City and Las Vegas use PII-safe PrimeGov source pointers: Locus omits unstructured provider titles and the calling agent opens the cited item before describing it. Optional filters select the one headline before the cap. Not legal advice. |
 | Dated changes around one place | `locus_ownership_loop` | `{ "address": "...", "radiusMeters": 1500, "state": "NC", "countyFips3": "183", "zip": "27601" }` | Composite dated-change bundle across available ownership, tax, flood, transfer, and local lanes. |
 | Coastal overlays | `locus_coastal_county_overlays` | `{ "address": "..." }` or `{ "latitude": 34.22, "longitude": -77.88, "county": "auto" }` | Coastal hazard overlays, parcel/address facts, zoning/flood/wetland/resiliency context for supported coastal counties. |
@@ -621,8 +625,11 @@ or legal verdict.
 2. `locus_satellite_scene_availability { "bbox": <from retryInput>, "fromDate": ..., "toDate": ... }`
    lists dated Sentinel-2 scenes with cloud cover (downtown Raleigh: 0 % cloud scenes on
    2026-01-04, 2026-04-21, 2026-05-19).
-3. `locus_metro_permits { "address": ... }` returns permits within 500 m for the last 12 months with
-   `workclass`, `proposeduse`, `estprojectcost`, `pin`, and street (23 permits in the test).
+3. For permits near the scene, call `locus_metro_permits` in point-radius mode with
+   `{ "city": "raleigh", "latitude": <scene center latitude>, "longitude": <scene center longitude>, "radiusMeters": 500 }`.
+   An exact address instead uses `{ "place": "<address>" }` and selects the parcel's legal permitting
+   authority; it is **not** a 500 m search. Point mode defaults to a one-year lookback, but returned
+   fields and record counts depend on the city's published source.
 4. Keep only permits that could show from above at 10 m: `New Building`, `Addition`, demolition,
    or a large cost. Interior alterations, repairs, and change-of-use never show. A bounded
    judgment model (one yes/no per permit) sorted the 23 cleanly: a new school building
@@ -783,6 +790,30 @@ curl -X POST https://api.locus.report/tools/call \
 
 Browse the free catalog with `curl https://api.locus.report/tools/list`; every entry also appears as a `/api/<tool_name>` path in the generated OpenAPI. Keep the two body shapes straight: flat fields for `/api/locus_*`, `{name, arguments}` for `/tools/call`. A flat body sent to `/tools/call` returns `wrapped_body_required` with the correct shape.
 
+## Permit activity discovery
+
+The former `locus-permit-activity` capability is now the **free** `locus_metro_permits` tool.
+Search for “building permits”, “permit activity”, or “contractors working nearby” with
+`locus_search_tools`, then use `locus_execute` or `POST /tools/call` with that exact catalog name.
+Use the x402-paid `locus-metro-permits` dual only when a client specifically needs the paid rail;
+do not pay to discover or read records available through the free tool.
+
+```json
+{"name":"locus_metro_permits","arguments":{"place":"1 E Edenton St, Raleigh, NC 27601"}}
+```
+
+For a supported city's nearby search, pass `city`, `latitude`, `longitude`, and optionally
+`radiusMeters` (50–3000), `sinceDate` (`YYYY-MM-DD`), `order` (`newest` or `nearest`), and
+`maxRecords` (1–100, default 25). For recurring point checks, send the prior response's
+`polling.nextSince` as `sinceDate` and previously seen permit IDs as `excludePermitIds`;
+`polling.nothingNew` means no new matching records in that check, not no permit activity.
+Chicago, New York City, Austin, and Seattle additionally support `minReportedCostUsd`,
+`trade`, and `scope` filters and published contractor-company fields. Read the live schema
+for allowed trade and scope values. An exact parcel lookup uses `place` or `parcelId`/
+`parcelIds` with `state` and `county`, not `address`. Use `locus_lane_availability` to
+check coverage; an empty or unavailable source is not evidence that no permits exist.
+Permit statuses are published workflow fields, not construction or compliance findings.
+
 ## MCP call pattern
 
 1. Call `locus_search_tools` with the user intent, place, and known source category.
@@ -861,7 +892,7 @@ changes what a call is allowed to do.
 
 ## x402 payment flow
 
-The paid catalog includes native products, promoted free duals, and the seven paid-only atomics listed above. Native tools use the transports listed in their catalogs. The seven paid-only atomics are REST-only.
+The paid catalog includes native products, promoted free duals, and paid-only atomics. Native tools use the transports listed in their catalogs. Paid-only atomics are REST-only.
 
 1. **REST:** call `POST /api/<tool-slug>`. Read the x402 v2 `PaymentRequired` body from HTTP 402. Retry the identical request with `PAYMENT-SIGNATURE`. Read settlement from `PAYMENT-RESPONSE`. Legacy `X-PAYMENT` and `X-PAYMENT-RESPONSE` remain compatibility aliases.
 2. **MCP:** use only paid entries present in the MCP catalog. Call `locus_execute`, then retry with `_meta["x402/payment"]` when challenged.
