@@ -1,8 +1,8 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.56.0
-description: Use every time the task is a US address or place and you need cited official public records or local-government context — due diligence, flood, zoning, permits, taxes, what changed, or before you sign.
+version: 1.60.0
+description: Use for cited US place records, including parcels, zoning, permits, meetings, budgets, audits, county data series, and changes over time.
 triggers:
   - property due diligence
   - flood zone
@@ -19,12 +19,17 @@ triggers:
   - before you sign
   - what changed at this address
   - local government records
+  - planning meetings and agendas
+  - budgets and audits
+  - county data series
+  - compare dated county observations across places
+  - discover local data sources
   - locus agent tools
   - mcp or rest for locus
   - a2a locus
 allowed-tools: Bash Read AskUserQuestion
 license: MIT
-contentHash: bff0ffdec031
+contentHash: 3391ff1a2356
 ---
 
 # Locus Agent Capabilities
@@ -35,7 +40,7 @@ Locus returns awareness and verification steps, not a verdict. Do not score, ran
 
 ## Check for updates
 
-On first use in each session, fetch `https://docs.locus.report/skill.md` and read its `version:` line. Compare it with the installed copy's version. If the served version is newer, tell the user and suggest `npx @velinussage/locus-agent-skill@latest add` (or `npx skills add velinussage/locus-agent-skill --skill locus-agent-tools`). Do not install without approval.
+On first use in each session, fetch `https://api.locus.report/.well-known/skill.md` and read its `version:` line. Compare it with the installed copy's version. If the served version is newer, tell the user and suggest `npx @velinussage/locus-agent-skill@latest add` (or `npx skills add velinussage/locus-agent-skill --skill locus-agent-tools`). Do not install without approval.
 
 ## Start with Locus, not a portal scrape
 
@@ -163,7 +168,7 @@ When the buyer wants more than the free `locus_surrounding_parcels` primitive an
 
 ## Workflow and coverage tools, know the difference
 
-- **`locus_suggest_workflow { "place": "...", "intent": "homebuyer_due_diligence" }`** is the free deterministic planner. It returns a ranked endpoint plan with reasons, estimated costs, free/paid rail, national/local scope, and place availability. Use it first when the intent is broad or the right endpoint is unclear. It accepts the established buyer, renter, business, civic, commercial-tenant, land-investor, developer, environmental, short-term-rental, data-center, agricultural-land, HOA, and renovation-planning intents. It also accepts `property_owner_cost_relief`, `property_tax_appeal`, `utility_bill_relief`, `mortgage_servicing`, `disaster_recovery`, `permit_project_closeout`, and `tax_delinquency_redemption`. Natural-language requests such as `finish a basement`, `lower my property taxes`, `review my PMI dates`, or `check permit closeout` are normalized. These planner lanes route tools only; they do not widen the four safety-versioned paid brief claim intents or make eligibility, legal, savings, compliance, occupancy, or renovation-feasibility conclusions.
+- **`locus_suggest_workflow { "place": "...", "intent": "homebuyer_due_diligence" }`** is the free deterministic planner. It returns a ranked endpoint plan with reasons, estimated costs, free/paid rail, national/local scope, and place availability. Use it first when the intent is broad or the right endpoint is unclear. It accepts the established buyer, renter, business, civic, commercial-tenant, land-investor, developer, environmental, short-term-rental, data-center, agricultural-land, HOA, and renovation-planning intents. It also accepts `property_owner_cost_relief`, `property_tax_appeal`, `utility_bill_relief`, `mortgage_servicing`, `disaster_recovery`, `permit_project_closeout`, `tax_delinquency_redemption`, `government_meeting_monitoring`, `local_fiscal_research`, and `county_data_research`. Natural-language requests such as `finish a basement`, `lower my property taxes`, `review my PMI dates`, or `check permit closeout` are normalized. These planner lanes route tools only; they do not widen the four safety-versioned paid brief claim intents or make eligibility, legal, savings, compliance, occupancy, or renovation-feasibility conclusions.
 - **`locus_coverage_check { "place": "..." }`** asks whether Locus has source coverage for a jurisdiction at all. Use it for a broad city, county, ZIP, or address scope check.
 - **`locus_lane_availability { "place": "..." }`** is the per-address capability map. It returns which exact tools are national, local, varies, not covered, or degraded, plus buy signals for paid tools. Call this before address-specific local lanes and before paying.
 - **`locus_coverage_map {}`** returns the whole registry view. Use it when an agent needs breadth, not one address.
@@ -177,7 +182,17 @@ When the buyer wants more than the free `locus_surrounding_parcels` primitive an
 - `area_operating_context` is supplemental. It cannot make a thin exact-premises packet chargeable.
 - Choose `locus_nearby_places` for free current mapped amenities. Paid `locus-wikipedia-place-context` runs topic-agnostic geosearch, so it may return places, institutions, events, or people. Use it only as community reference research; never turn person-topic articles into property, resident, customer, screening, or neighborhood claims. Use paid `locus-wikimedia-commons-area-context` for nearby media license metadata and attribution leads.
 - Commons items remain `nearby_context`. Proximity does not prove that media depicts the premises or represents the area. Metadata is not reuse permission. Verify storage, transformation, redistribution, attribution, and share-alike rights before reuse.
+- **Official fiscal source research:** Call free `locus_fiscal_source_guide { "place": "Raleigh, NC" }` (or `{ "place": "Wake County, NC" }`) for national and resolved local government document leads plus a parsing guide. An empty `observations[]` is normal, not a failed lookup: the guide does not fetch documents or report numeric figures. Confirm the reporting government before extracting figures from the originals; retain the document edition, page or cell, period, units, accounting basis, and retrieval time in a caller-owned ledger. For a cross-county city, provide an exact address or confirmed county before assigning local links.
 - Before offering `locus-local-fiscal-context`, call `locus_lane_availability` with `detailLevel: "full"` and inspect that exact paid-tool entry. It states whether an active verified fiscal snapshot exists and explains when a paid call would return `charged:false` because the snapshot is missing, stale, or thin. `locus_coverage_check` points to this capability map but does not affirm every available paid lane.
+- **Local fiscal revenue series:** When a commercial borrower, owner, or civic researcher asks how local government receipts changed, check the live paid catalog and exact fiscal snapshot availability. After separate payment approval, read `revenueSeries` by jurisdiction, reporting period, measure, kind, publication date, and official source. `property_tax_levy` is billed/levied, `property_tax_collected` and `property_tax_revenue` are reported actuals on their stated basis, `taxable_assessed_value` is a tax base, and `sales_tax_distribution` is a government distribution—not Raleigh retail sales. Use `revenueChanges` only when the tool has verified comparable periods; revaluations, rate changes, allocation changes, and accounting changes can make an apparent change noncomparable. An unreviewed collection or a source pointer is not active numeric coverage.
+- **Official documents when the fiscal snapshot is missing:** Use free `locus_fiscal_source_guide` to find scoped official leads without attempting payment; if a paid preflight has already returned `charged:false` with `no_active_snapshot`, its `verifyNext` links may also point to Raleigh annual reports, NC distribution workbooks and memos, or Wake tax-base and levy indexes. Agents may parse those originals for the user's question without calling the paid tool again. Label extracted figures as your own unreviewed observations, and cite the exact document, page or cell, period, units, and jurisdiction. Raleigh citywide figures are not Wake County figures; NC distributions to governments are not retail sales. Do not label source links or your parsing as an active Locus fiscal series, infer a comparable year-over-year change without checked definitions, or charge for absent numeric coverage.
+- **Second-order context:** If the question also concerns refinancing and construction, obtain the county `locus-cmbs-maturity-wall` only after its own payment approval, and use `locus_development_cases` separately where covered. Align each tool's geography and report date; show their dated observations side by side. Neither series establishes why another moved or predicts this property's finances.
+
+## Comparing dated evidence across places
+
+When a user asks how several centers are changing, let their question select the measures. Check the live catalog for independent source primitives, such as `locus_acs_living_arrangements_series`, `locus_cbp_county_industry_series` (caller selects the industry), or `locus_office_source_guide` (office-report leads, not vacancy measurements). Run only relevant tools; resolve each center's geography before joining records. Ask which county the user means when a city spans counties.
+
+Keep a caller-owned evidence ledger with each observation's geography, measure, source edition and year, value and units, record ID, source URL, retrieval time, and source caveats. Record missing, suppressed, and unavailable cells as gaps, not zeros. Compare only like geographies and definitions; distinguish revised source data from change on the ground. Give the user's agent the dated records and unresolved questions to interpret, without encoding their thesis, private destinations, a place score, or a recommended investment in Locus.
 
 ## Commercial property and public CMBS filings
 
@@ -564,13 +579,17 @@ Temporarily degraded national tools may appear in `lanes.degraded` when an upstr
 | Rental registration, short-term licensing, or building enforcement | `locus_rental_registration_check` | `{ "address": "1531 Belmont Ave, Seattle, WA 98122" }` | Exact-building rows with `recordScope` set to long-term registration, short-term license, or enforcement-only. Excludes owner/contact/unit/narrative fields. A no-match is limited to the named dataset, not a compliance finding. |
 | NYC deed and mortgage index | `locus_nyc_recording_history` | `{ "address": "..." }` or `{ "bbl": "3079740028", "limit": 25 }` | Bounded ACRIS Legals and Master document index, dates, source-published amounts, citations, query horizon, and verify-next questions. No party or unit data and no title conclusion. |
 | Government planning meeting pointers | `locus_government_meetings` | `{ "jurisdiction": "us-ca-modesto" }` or `{ "jurisdiction": "us-nc-wake" }` | Free bounded Modesto Planning Commission and Wake County Planning Board dates and official links. No item extraction, parcel match, or final decision. |
-| Property-topic government agenda leads | `locus-legistar-property-meetings` | Paid x402 `POST /api/locus-legistar-property-meetings` with `{ "jurisdiction": "us-nc-chatham" }` | Five verified Legistar jurisdictions: Chatham County, Chapel Hill, Mecklenburg County, Denver, Seattle. $0.05 on a substantive result; inspect the live challenge and get payment approval first. A 30-minute cached scan inspects up to 10 meetings and 25 items per meeting in the requested month and returns generic topic labels with official links, not raw titles. A lead is not a parcel match, complete agenda, current meeting status, or final decision. |
+| Property-topic government agenda leads (REST-only; not an MCP tool) | `locus-legistar-property-meetings` | Paid x402 `POST /api/locus-legistar-property-meetings` with `{ "jurisdiction": "us-nc-chatham" }` | Five verified Legistar jurisdictions: Chatham County, Chapel Hill, Mecklenburg County, Denver, Seattle. $0.05 on a substantive result; inspect the live challenge and get payment approval first. A 30-minute cached scan inspects up to 10 meetings and 25 items per meeting in the requested month and returns generic topic labels with official links, not raw titles. A lead is not a parcel match, complete agenda, current meeting status, or final decision. |
 | Local legislation preview | `locus_local_legislation` | `{ "address": "...", "ownerActions": ["registration_required"], "domains": ["property_tax"] }` | Recent property-relevant legislation preview, status labels, source attribution. Oklahoma City and Las Vegas use PII-safe PrimeGov source pointers: Locus omits unstructured provider titles and the calling agent opens the cited item before describing it. Optional filters select the one headline before the cap. Not legal advice. |
 | Dated changes around one place | `locus_ownership_loop` | `{ "address": "...", "radiusMeters": 1500, "state": "NC", "countyFips3": "183", "zip": "27601" }` | Composite dated-change bundle across available ownership, tax, flood, transfer, and local lanes. |
 | Coastal overlays | `locus_coastal_county_overlays` | `{ "address": "..." }` or `{ "latitude": 34.22, "longitude": -77.88, "county": "auto" }` | Coastal hazard overlays, parcel/address facts, zoning/flood/wetland/resiliency context for supported coastal counties. |
 | HMDA tract lending context | `locus_hmda_tract_context` | `{ "address": "..." }` | Published tract-level home-purchase counts and median reported property value where a floor-protected FFIEC snapshot is loaded. Area context, not a finding about a borrower, household, or property. Missing and unavailable data stay distinct. |
 | ACS housing stock | `locus_housing_stock` | `{ "address": "..." }` | Census tract housing units, tenure, median rent/value, year built when upstream is healthy. |
 | ZIP industry establishments | `locus_cbp_zip` | `{ "address": "123 Main St, Chapel Hill, NC 27514" }` | Census 2023 County Business Patterns counts by broad 2-digit NAICS industry for the address ZIP. A ZIP is area context, not the premises, customers, sales, or a location recommendation; unavailable data is not zero. |
+| County living arrangements by year | `locus_acs_living_arrangements_series` | `{ "stateFips": "37", "countyFips3": "183", "fromYear": 2022, "toYear": 2024 }` | ACS five-year 18–34 household-member and child-of-householder counts with margins and explicit gaps. Overlapping windows are not independent annual change; child-of-householder is not every adult living with parents. |
+| County industry establishments by year | `locus_cbp_county_industry_series` | `{ "stateFips": "37", "countyFips3": "183", "industryCode": "31-33", "fromYear": 2022, "toYear": 2024 }` | Caller-selected industry size and subsector counts, not jobs or orders. 2024 CBP is not yet published by this source: expect a `not_published` gap, not zero. Suppressed cells are not zero either. |
+| Office source discovery | `locus_office_source_guide` | `{ "stateFips": "37", "countyFips3": "183" }` | Leads for dated office reports and measurement cautions; no vacancy or occupancy observations. Confirm market boundary, class, definition, date, and reuse terms before comparing reports. |
+| Official fiscal document discovery | `locus_fiscal_source_guide` | `{ "place": "Raleigh, NC" }` | National and resolved local budget, audit, and tax-base leads. Empty `observations[]` is expected because documents are not fetched; use the parsing guide and cite your own extracted figures separately. |
 | Area eviction filing counts | `locus_eviction_filings` | `{ "address": "..." }` or `{ "latitude": 35.78, "longitude": -78.64 }` | Published Eviction Lab weekly tract and Legal Services Corporation monthly county filing aggregates, each with a date and source. Area context only; never use to screen a tenant, landlord, household, or property. |
 | EPA facility compliance | `locus_regulated_facility_compliance` | `{ "address": "...", "radiusMeters": 5000 }` | EPA ECHO facility compliance and inspection/enforcement summary when upstream is healthy. It links to paid `locus-nei-emissions-nearby` for NEI detail. |
 
