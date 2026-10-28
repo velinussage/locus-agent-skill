@@ -1,8 +1,8 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.61.0
-description: Use for cited US place records, including parcels, zoning, permits, meetings, budgets, audits, county data series, and changes over time.
+version: 1.62.0
+description: Use for cited US place records, including parcels, zoning, permits, meetings, budgets, audits, county data series, changes over time, and setting up dynamic MCP event polling or signed webhooks.
 triggers:
   - property due diligence
   - flood zone
@@ -27,9 +27,13 @@ triggers:
   - locus agent tools
   - mcp or rest for locus
   - a2a locus
+  - mcp events
+  - subscribe to property changes
+  - watch address for permits or deadlines
+  - real estate webhook notifications
 allowed-tools: Bash Read AskUserQuestion
 license: MIT
-contentHash: 06aa374d9a82
+contentHash: d6a93e779f5b
 ---
 
 # Locus Agent Capabilities
@@ -90,6 +94,8 @@ Install this skill in Codex-style agents:
 ```bash
 npx @velinussage/locus-agent-skill add
 ```
+
+For MCP event discovery, call free `locus_mcp_events_catalog` with `{}`. It returns public event names, authentication guidance, method pointers and `skill://locus/subscribing-to-locus-events`; use live `events/list` for authoritative event input and payload schemas. Polling and subscriptions are separate operations, not side effects of reading this catalog.
 
 Remote MCP server:
 
@@ -306,6 +312,7 @@ Use the exact JSON shapes below as safe defaults. If a tool also accepts `latitu
 | Verify a citation URL | `locus_verify_citation` | `{ "sourceUrl": "https://...", "recordId": "optional", "jurisdiction": "optional" }` | Whether a citation matches a known source card, with provenance context. |
 | What policy sources govern here? | `locus_policy_sources` | `{ "place": "Raleigh, NC" }` or `{ "place": "Raleigh, NC", "liveSearch": true }` | State, county, city policy-source list, legal geographies, source links, and optional operator-enabled Gov-Index pointer discovery (`govIndex`). |
 | Read aggregate coverage demand | `locus_coverage_demand` | `{}` | Aggregate requested-coverage demand, not place records. |
+| Discover dynamic MCP real-estate events | `locus_mcp_events_catalog` | `{}` | Public MCP Events catalog: event names, parameter/payload summaries, delivery modes (`poll`, `webhook`), auth rules, and `skill://locus/subscribing-to-locus-events` pointer. |
 
 ### High-value property workflows
 
@@ -853,6 +860,55 @@ Permit statuses are published workflow fields, not construction or compliance fi
 
 Use the argument key from the tool schema. Do not send every place as `place`; many tools require `address`, `state` plus `county`, or FIPS fields.
 
+### Setting up dynamic real estate MCP Events (Poll & Signed Webhooks)
+
+Both MCP harnesses (via protocol JSON-RPC `events/list`, `events/poll`, `events/subscribe`, `events/unsubscribe` per SEP-3415) and models inside `tools/call`-only clients (via `locus_mcp_events_catalog` and `/muse/mcp` tools `list_event_types`, `poll_events`, `subscribe_event`, `unsubscribe_event`, `list_event_subscriptions`) can dynamically set up, poll, and subscribe to cited public-record events:
+
+| Event name | Dynamic target & filter arguments | What it emits |
+|---|---|---|
+| `locus.real_estate.changes_detected` | `{ "addresses": ["123 Main St, Raleigh, NC"], "lanes": ["locus_metro_permits", "locus_zoning"], "includeUpcomingDays": 60 }` (or `{ "poolId": "<uuid>" }`) | Cited `newRecords` and `newUpcoming` dated milestones since the baseline cursor, plus `followUpTools`. |
+| `locus.real_estate.deadline_approaching` | `{ "addresses": ["123 Main St, Raleigh, NC"], "horizonDays": 30, "basis": ["as filed", "statutory", "published schedule"] }` (or `{ "poolId": "<uuid>" }`) | Dated tax, appeal, hearing, or filing milestones entering the window, with `daysRemaining` and `recommendedTools`. |
+| `locus.jurisdiction.legislation_activity` | `{ "address": "123 Main St, Raleigh, NC", "topic": "zoning" }` (or `{ "state": "NC", "topic": "housing" }`) | Newly cited bills or ordinances (`zoning`, `housing`, `tax`, `short_term_rental`, `development`, `all`) with `"Data via LegiScan, CC BY 4.0"` attribution. |
+| `locus.pool.changes_detected` | `{ "poolId": "<uuid>", "lanes": [...], "includeUpcomingDays": 60 }` | Authenticated saved-pool record and milestone changes. |
+| `locus.watch.digest_sent` | `{ "poolId": "<optional-uuid>" }` | Privacy-preserving digest count (`{ "changeCount": N }` only; no addresses or raw records). |
+
+1. **Discover event schemas first:** Call JSON-RPC `events/list` (or model tool `list_event_types` on `/muse/mcp`, or free `locus_mcp_events_catalog` with `{}` on `/mcp` or REST `/tools/call`) and read each event's `inputSchema`, `payloadSchema`, `delivery`, and `requiresAuthForPoll`.
+2. **Poll an address set or pool (`events/poll` or `poll_events`):**
+   - Public inline-address polls (`addresses`: 1-10 US addresses) work on `https://mcp.locus.report/mcp` without authentication. Pool-scoped events (`poolId`) require `/muse/mcp` OAuth or `Authorization: Bearer lmc_...`.
+   - Omit `cursor` on the first call to establish a baseline cursor (`cur_...`), then pass the returned `cursor` on subsequent polls:
+   ```json
+   {
+     "name": "locus.real_estate.changes_detected",
+     "arguments": {
+       "addresses": ["615 Hillsborough St, Raleigh, NC 27603"],
+       "lanes": ["locus_metro_permits", "locus_zoning", "locus_flood_zone"],
+       "includeUpcomingDays": 60
+     },
+     "cursor": "cur_..."
+   }
+   ```
+   - On `/muse/mcp`, calling `poll_events` with `"deliverWebhooks": true` also runs a bounded webhook delivery sweep for the authenticated principal's active subscriptions.
+3. **Subscribe to signed Standard Webhooks (`events/subscribe` or `subscribe_event`):**
+   - Connect to `https://mcp.locus.report/muse/mcp` (OAuth 2.1 with `pools events:subscribe` scopes) or pass `Authorization: Bearer lmc_...`.
+   - Provide a public HTTPS `delivery.url` (query parameters such as `?mcp_event_subscription=...` are preserved) and a Standard Webhooks signing secret (`whsec_<base64-of-24-to-64-bytes>`):
+   ```json
+   {
+     "name": "locus.real_estate.deadline_approaching",
+     "arguments": {
+       "addresses": ["615 Hillsborough St, Raleigh, NC 27603"],
+       "horizonDays": 30,
+       "basis": ["statutory", "as filed"]
+     },
+     "delivery": {
+       "mode": "webhook",
+       "url": "https://receiver.example.com/webhooks/locus",
+       "secret": "whsec_..."
+     }
+   }
+   ```
+   - **Synchronous challenge handshake:** Before storing the subscription, Locus POSTs `{ "type": "verification", "challenge": "<uuid>" }` signed with Standard Webhooks headers (`webhook-id`, `webhook-timestamp`, `webhook-signature`, `X-MCP-Subscription-Id`). The receiver must verify the HMAC-SHA256 signature (`v1,<base64>` over `${webhookId}.${timestamp}.${rawBody}`) and return HTTP 2xx with `{ "challenge": "<uuid>" }` within 5 seconds.
+   - **Event deliveries:** Each occurrence POST sets `webhook-id` equal to `event.eventId` (`evt_<sha256>`). Verify `webhook-signature` and `webhook-timestamp` before trusting the payload, deduplicate by `eventId`, and use `list_event_subscriptions` or `events/unsubscribe` (`unsubscribe_event`) to inspect or remove subscriptions. Never treat an event notification as payment authorization or a safe/unsafe verdict.
+
 <!-- satellite-input-guide:start -->
 ### Prepare a satellite imagery purchase
 
@@ -892,10 +948,11 @@ weeks ago. Call `resources/list` and read any whose URI starts with
 | `skill://locus/choosing-a-locus-tool` | Picking a tool. Search first, free lanes before paid, and the no-verdict boundary. |
 | `skill://locus/reading-locus-coverage` | Reporting an empty result. Distinguishes `out_of_coverage`, `source_unavailable`, and a genuine empty. |
 | `skill://locus/locus-place-workflow` | Any multi-tool question about a place. The resolve to preflight to fan-out to compose order. |
+| `skill://locus/subscribing-to-locus-events` | Setting up, polling, or subscribing to dynamic real-estate MCP Events (`events/list`, `events/poll`, `events/subscribe`, `events/unsubscribe`, `poll_events`, `subscribe_event`), Standard Webhooks verification, and paid follow-up boundaries. |
 
 This follows the draft Skills Extension (SEP-2640), so the capability is
 advertised under `experimental` as `io.modelcontextprotocol/skills`. A client
-that does not know the extension still sees four ordinary markdown resources and
+that does not know the extension still sees five ordinary markdown resources and
 can read them normally.
 
 These resources are guidance, never authorization. Free, paid, and admin
