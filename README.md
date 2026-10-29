@@ -2,7 +2,7 @@
 
 [![skills.sh](https://skills.sh/b/velinussage/locus-agent-skill)](https://skills.sh/velinussage/locus-agent-skill)
 
-Install three Locus agent skills: the general MCP/REST/A2A capability guide, the opt-in surrounding-area purchase workflow, and the property-tax protest workflow.
+Install eight Locus agent skills: the general MCP/REST/A2A capability guide, the opt-in surrounding-area purchase workflow, the property-tax protest workflow, home-watch, water-incident, seller-readiness, escrow-shock, and payment-hardship workflows.
 
 Locus returns awareness and verification steps, not a verdict. Do not use it to score, rank, screen, value, predict, or label a person, property, block, or neighborhood as safe or unsafe.
 
@@ -12,7 +12,7 @@ Locus returns awareness and verification steps, not a verdict. Do not use it to 
 npx @velinussage/locus-agent-skill add
 ```
 
-By default this writes `locus-agent-tools/`, `locus-surrounding-area-analysis/`, and `locus-property-tax-protest/` to `$CODEX_HOME/skills` or `~/.codex/skills`. The general public skill routes relevant requests to the specialist workflows; it does not turn ordinary Locus discovery into a paid flow.
+By default this writes `locus-agent-tools/`, `locus-surrounding-area-analysis/`, `locus-property-tax-protest/`, `locus-home-watch/`, `locus-water-incident/`, `locus-seller-readiness/`, `locus-escrow-shock/`, `locus-payment-hardship/`, `locus-insurance-nonrenewal/`, `locus-inherited-home/` and `locus-aging-owner/` to `$CODEX_HOME/skills` or `~/.codex/skills`. The general public skill routes relevant requests to the specialist workflows; it does not turn ordinary Locus discovery into a paid flow.
 
 Options:
 
@@ -65,12 +65,15 @@ npx skills use velinussage/locus-agent-skill --skill locus-agent-tools
 
 ## What the skills teach agents
 
-- The full free catalog exposes 104 tools, including 58 national free lanes. Read the live catalog because rollout configuration can change the visible total.
+- Read the live free catalog for current tools and national lanes; rollout configuration can change the visible total.
 - `locus_place_facts` is the best first call when supported.
 - `locus_lane_availability` shows national, local, varies, not-covered, and degraded lanes before payment.
 - Free tools stay read-only and cited.
+- The payment-hardship workflow routes mortgage trouble to HUD counseling agencies first, then official state foreclosure pointers and servicer fact cards; the tax branch checks payment status, calendars and relief-program pointers without an eligibility decision.
 - `locus_rental_registration_check` declares its scope per jurisdiction. Long-term registration is wired in Minneapolis, Montgomery County, New York City, and Seattle; Denver is short-term-license only; Kansas City is building-enforcement only. It returns no legal-rental or compliance verdict.
 - The property-tax protest workflow keeps deadline, filing-guide, evidence, browser handoff, and published-outcome facts separate from the owner's own filing and value position.
+- The home-watch workflow sets up deadline and change events for an address or a signed-in pool, reads an empty poll as "nothing new seen", and offers each paid next step only with the owner's approval.
+- The water-incident workflow keeps what failed, who maintains each pipe segment, and the resulting damage or bill separate, and gives insurer questions without a coverage verdict.
 - Paid endpoints use live x402 discovery, may offer USDC on Base and Solana, and require explicit user authorization. Agents choose one complete `accepts[]` entry.
 - The surrounding-area workflow requires two separate approvals: $0.10 for the reusable JSON packet, then $0.15 for an eligible HTML/PDF report within 24 hours. Packet and report retrieval are proof-gated for 90 days.
 
