@@ -74,7 +74,7 @@ npx skills use velinussage/locus-agent-skill --skill locus-agent-tools
 - The property-tax protest workflow keeps deadline, filing-guide, evidence, browser handoff, and published-outcome facts separate from the owner's own filing and value position.
 - The home-watch workflow sets up deadline and change events for an address or a signed-in pool, reads an empty poll as "nothing new seen", and offers each paid next step only with the owner's approval.
 - The water-incident workflow keeps what failed, who maintains each pipe segment, and the resulting damage or bill separate, and gives insurer questions without a coverage verdict.
-- Paid endpoints use live x402 discovery, may offer USDC on Base and Solana, and require explicit user authorization. Agents choose one complete `accepts[]` entry.
+- Paid endpoints use live x402 and MPP discovery: x402 may offer USDC on Base and Solana (`accepts[]`), and MPP offers `USDC.e` (`0x20C000000000000000000000b9537d11c60E8b50`) on Tempo mainnet (`eip155:4217`, `chainId: 4217`) via `WWW-Authenticate: Payment`, all requiring explicit user authorization. Agents choose one complete offer (for example `-p x402 --payment-network base` or `-p mpp --payment-network tempo`).
 - The surrounding-area workflow requires two separate approvals: $0.10 for the reusable JSON packet, then $0.15 for an eligible HTML/PDF report within 24 hours. Packet and report retrieval are proof-gated for 90 days.
 
 Docs: <https://docs.locus.report/skill.md>

@@ -1,7 +1,7 @@
 ---
 name: locus-agent-tools
 preamble-tier: 1
-version: 1.66.0
+version: 1.69.0
 description: Use for cited US place records, including parcels, zoning, permits, meetings, budgets, audits, county data series, changes over time, and setting up dynamic MCP event polling or signed webhooks.
 triggers:
   - property due diligence
@@ -33,12 +33,12 @@ triggers:
   - real estate webhook notifications
 allowed-tools: Bash Read AskUserQuestion
 license: MIT
-contentHash: c714bcb0c789
+contentHash: 5982e0aebc33
 ---
 
 # Locus Agent Capabilities
 
-Use this skill to connect an agent to Locus when a place-based workflow needs local-government context: taxes, parcels, zoning, flood, environmental records, development activity, transportation projects, local policy, source coverage, or recurring monitoring. The fuller client guide is [`docs/AGENT_CAPABILITIES.md`](https://github.com/velinussage/locus/blob/main/docs/AGENT_CAPABILITIES.md).
+This skill is a guide to answering the user's question with Locus, not instructions for running their assistant. It is prescriptive about what Locus records mean and how the API works, and conditional about when to call each tool. The fuller client guide is [`docs/AGENT_CAPABILITIES.md`](https://github.com/velinussage/locus/blob/main/docs/AGENT_CAPABILITIES.md).
 
 Locus returns awareness and verification steps, not a verdict. Do not score, rank, predict, screen, value, or label a person, property, block, or neighborhood as safe/unsafe.
 
@@ -48,27 +48,29 @@ On first use in each session, fetch `https://api.locus.report/.well-known/skill.
 
 ## Start with Locus, not a portal scrape
 
-- Every time the question is a US address or place plus official records or local-government context, call `locus_lane_availability` or `locus_suggest_workflow` first.
-- Looking is free. Paying happens only after an x402 challenge the user authorized.
+- When the question is broad or the right local lane is unclear for a US address or place, call `locus_lane_availability` or `locus_suggest_workflow` first. When the user asks a specific question that maps to one known free tool (such as a water service-line check, a contractor license number, or a state statutory pointer), call that smallest free tool directly; a water-line question should not trigger the same workflow as a tax notice.
+- Looking is free. Paying happens only after a live x402 or MPP (Tempo) challenge the user authorized.
 - Do not buy a generic scrape of FEMA, EPA ECHO/SDWIS/TRI, USGS, HUD, FCC, county GIS, or assessor sites Locus already wraps with provenance. Still follow the official source link Locus returned when you need to verify.
 - **Multi-home comparison:** when the job is two or three finalist addresses, read the dedicated workflow skill at `https://api.locus.report/.well-known/skills/compare-homes/v1.md`. Successful `locus_lane_availability` responses may include optional `skillContinuation` metadata pointing there when report compose rollout is enabled.
 - **Paid buyer bundle:** for a three-home RentCast matrix with work items, use `locus-three-property-buyer-comparison` after user approval; its paid response may also include the same continuation metadata when compose is enabled.
 
 ## Choose the property decision first
 
-Start with `locus_suggest_workflow` for a broad question, then `locus_lane_availability` for the exact place. Use the records below as evidence for the person's decision, not as a verdict. Skip unavailable lanes; use the live catalog for current names and schemas.
+Each recipe below matches a user decision to its minimum inputs, smallest useful free call, coverage limits, what the result establishes, completeness and stop conditions, and the optional paid addition (always presented as an offer, never an instruction to spend). Skip unrelated lanes; use the live catalog for current names and schemas.
 
-| Decision | Free record evidence to check first |
-|---|---|
-| Owning costs or a revaluation notice | `locus_tax_calendar` and `locus_appeal_filing_guide` for statutory rules, official county pointers, and filing steps; confirm current-cycle dates, then use `locus_property_tax_estimate` where supported. Use `locus_appeal_window` with a notice date if deadline arithmetic is needed. Paid assessment or owner-cost follow-ups only if the free evidence leaves a question and the user approves. |
-| Buying | `locus_place_facts`, parcel records, zoning, flood, transfers, and development cases for the exact property. Check each returned source before comparing places; do not pick a winner. |
-| Renting | `locus_rental_registration_check` where wired, plus parcel, flood, and nearby official records. A no-match is not proof of legal permission or habitability. |
-| Leasing | Parcel, zoning, permits, and nearby development records for the proposed premises; use workplace context only if jobs near the site matter. Jobs are not customer demand. |
-| Lending | Parcel, zoning, transfers, flood, and dated area lending or house-price records where available. Area aggregates do not value or qualify the subject or a borrower. |
-| Commercial property financing or ownership | Identify the exact commercial property and check parcel facts first. If the paid CMBS lanes appear in the live index, use `locus-cmbs-loan-context` for its filed loan and maturity, then `locus-cmbs-maturity-wall` only when county-level timing matters. Use the distinct area-context lanes described below only when they answer the user's question; none establish the property's loan or value. |
-| Developing | Parcel, zoning, permits, development cases, soil, wetlands, and flood records. Confirm current rules and project status with the agency; no buildability conclusion. |
+| Decision / question | Minimum inputs | Smallest useful free call | Coverage limits & what the result establishes | Completeness & stop conditions | Optional paid addition (offer only) |
+|---|---|---|---|---|---|
+| Water service-line material or water incident | Complete CA street address (with unit, city, state, ZIP) or US address / PWSID | `locus_service_line_material` (CA address) or `locus_water_systems` + `locus_water_utility_leak_adjustment_rules` | CA address inventory is opt-in and covers `~34%` of published statewide rows with complete indexable street addresses; `locus_water_systems` gives system-wide EPA SDWIS counts (not this parcel). Establishes utility-reported pipe classification or published leak rules as of the snapshot date, not a physical inspection or liability ruling. | `found`: report system-owned and customer-owned materials separately (`unknown` stays unknown; stop if that answers the question). `source_unavailable` with `incomplete_source_rows` ("this address isn't indexed"): do **not** treat as non-lead; direct the user to ask the utility for its inventory entry. `no_matching_record`: indexed system had no match for this address (still not non-lead). | None for pipe material; for broader site environmental context, offer `locus-environmental-context` ($0.05) only if the user asks. |
+| Revaluation notice, tax bill, or owning costs | Address or county + state (plus `noticeDate` if appealing) | `locus_tax_calendar` and `locus_appeal_filing_guide`; add `locus_appeal_window` when `noticeDate` is known | Covers all 50 states + DC for statutory framing and official county pointers; `locus_property_tax_estimate` is wired in supported tax-rate jurisdictions. Establishes statutory deadlines, filing body, and adopted rate components, not whether to appeal. | Stop after returning the deadline, filing steps, and free `locus_owner_programs` exemptions if that answers the user's question. If `matched: false` on `locus_appeal_window`, stop deadline arithmetic and hand off to the county pointer in `locus_tax_calendar`. | Offer `locus-assessment-position` ($0.10, `charge_free_unless_substantive` on 5+ same-roll peers), `locus-owner-action-brief` ($0.05), or `locus-owner-cost-review` ($0.25) if the user wants roll uniformity or recorded tax history. |
+| Mortgage or property-tax payment hardship | Address, point, or 2-letter state | `locus_housing_counselors` (mortgage/general) and `locus_foreclosure_process_pointers` (state) | National HUD directory lookup; 50-state + DC foreclosure pointer registry (`verified` in checked states, `not_verified` portal-only elsewhere). Establishes nearby directory agencies (`sourceStatusCode` is raw HUD `agc_STATUS`, not verified current approval) and state process pointers, not a sale countdown or legal advice. | If `no_agencies_in_radius`, widen the bounded search or give HUD's directory URL. If `locus_foreclosure_process_pointers` is `not_verified`, stop at the official court/housing portal and state that no statute was verified. Never invent a deadline when none is supplied. | None. Keep hardship routing free. |
+| Homeowners insurance nonrenewal or escrow shock | 2-letter state or address (plus notice/end dates or escrow letter figures) | `locus_insurance_nonrenewal_pointers` (nonrenewal) or `locus_homeowners_insurance_context` + `locus_owner_mortgage_calendar` (escrow) | 50-state + DC department portals (`verified` notice rules in 10 states; `complaintStatus: "verified"` where a direct complaint URL is checked, `"unresolved"` where portal-only). `fioZip` is 2018-2022 historical area context, not a quote or current rate. | If `notice.status: "not_verified"`, stop rule comparison and point to the state regulator portal. If `complaintStatus: "unresolved"`, state that the direct complaint handoff is unresolved and give `portalUrl`. For escrow shock without the servicer's letter, stop arithmetic until the user has the letter's figures. | Offer `locus-escrow-insurance-dossier` ($0.89), `locus-assessment-position` ($0.10), or `locus-property-tax` ($0.05). Responses also attach caller-paid x402 `handoffs[]`: `insurance_market.querylines` ($0.10 state NAIC carrier market share / SERFF rate activity) and, on `locus_mitigation_incentives`, `trade_contractors.locationlists` ($0.02 nearby certified roofers/installers). |
+| Inherited home or estate property pointers | 2-letter state or city + state / address | `locus_estate_property_pointers` (state rules) and `locus_tax_payment_status` / `locus_tax_calendar` (what is due) | 50-state + DC registry (`verified` in 34 jurisdictions, `not_verified` court portal elsewhere) plus ULC enactment tables (UPHPA, UPOAA, URPTODA). `smallEstate.thresholdScope: "non_exhaustive_excerpt"` marks statutory dollar excerpts that may have conditional branches (such as Ohio's `$35,000` general and `$100,000` surviving-spouse branches). | Treat `thresholdText` as a non-exhaustive excerpt and read the linked statute before ruling an estate in or out. If `transferOnDeathDeed` or `smallEstate` is `not_verified`, stop statutory claims and give the court self-help portal. If `locus_tax_payment_status` is `out_of_coverage` or `unavailable`, report that gap rather than "nothing due." | None required; if preparing to list the property later, see `locus-seller-readiness`. |
+| Contractor license check before hiring | 2-letter `state` and exact `licenseNumber` (or coordinates/ZIP for partner directory discovery first) | `locus_contractor_license_check` | Currently wired in Washington (WA L&I roster). Returns published license status, type, effective/expiration dates, and citation without person names or addresses. | `found`: report the published status and dates. `no_matching_record`: stop and tell the user to verify spelling/number on the state board portal (a miss is not proof of being unlicensed). `out_of_coverage` or `source_unavailable`: report the coverage or snapshot gap and stop. | None in Locus. When the user first needs nearby trade leads, `locus_mitigation_incentives` and `locus_permit_rules` attach the caller-paid `trade_contractors.locationlists` x402 handoff ($0.02 at `POST https://locationlists.com/api/x402/query`); always verify state licensure next via `locus_contractor_license_check` or the state board. |
+| Buying a property | Exact street address | `locus_lane_availability`, then `locus_place_facts`, `locus_zoning`, `locus_flood_zone`, `locus_parcel_transfers`, `locus_development_cases` | National hazard/environmental lanes cover all 50 states; parcel, zoning, permit, and transfer depth depend on wired county sources. Establishes recorded parcel attributes, district rules, and nearby filings without picking a winner or valuing the home. | Stop on any lane marked `notCovered` in `locus_lane_availability` and name the gap. If parcel identity is unresolved, confirm the house number before interpreting parcel or permit rows. | Offer `locus-before-you-sign` ($0.07), `locus-property-update` ($0.10), or `locus-place-report` ($0.05) as priced options with what each adds. |
+| Renting or checking rental registration | Exact building address | `locus_rental_registration_check`, `locus_flood_zone`, `locus_area_incidents` | Registration is wired in Minneapolis, Montgomery County, NYC, Seattle (long-term), Denver (STR license), and Kansas City (building enforcement only). | Read `recordScope` first: in Kansas City, stop before claiming whether a rental registration exists. A `no_matching_record` is not proof of legal permission or non-compliance. | Offer `locus-local-trend-brief` ($0.05) or `locus-rental-operations-brief` ($0.79) only if the user asks for trend or rent-median comparison. |
+| Leasing, lending, or commercial CMBS diligence | Exact commercial address (or county FIPS for maturity wall) | `locus_parcel_lookup`, `locus_zoning`, `locus_metro_permits`, `locus_development_cases` | Public CMBS filings cover SEC ABS-EE conduit/SASB trusts, not bank balance-sheet or agency loans. | If a CMBS or workplace lookup returns `no_matching_record`, `not_loaded`, or `out_of_coverage`, stop and report that public SEC filings did not match (never "no debt exists"). | Offer `locus-cmbs-loan-context` ($0.10), `locus-cmbs-maturity-wall` ($0.10), or `locus-workplace-employment-context` ($0.01) with exact price and scope. |
 
-The detailed tables below are a record lookup, not an order to call every tool.
+The detailed tables below are a reference lookup by question, not a checklist to run on every turn.
 
 ## Preview, Brief, and Same-data-paid
 
@@ -123,13 +125,19 @@ A2A and REST discovery:
 - [MCP catalog](https://mcp.locus.report/catalog) - searchable tool catalog.
 - [API base](https://api.locus.report) - health and discovery links.
 
-Buyers do not need a Locus or Coinbase Developer Platform account API key. Free tools are open. Paid tools return a live x402 or advertised MPP challenge. `PAYMENT-SIGNATURE` is a signed payment credential, not an account API key.
+Buyers do not need a Locus or Coinbase Developer Platform account API key. Free tools are open. Paid tools return a live x402 or advertised MPP challenge. `PAYMENT-SIGNATURE` (x402) and `Authorization: Payment` (MPP) are signed payment credentials, not account API keys.
 
 ### Fastest paid setup with AgentCash
 
 The whole free catalog runs without any of this. Get a wallet when you choose to call a paid route.
 
-AgentCash is one compatible x402 client. It creates a local payer wallet and can install its MCP server into common agent clients. Locus issues no buyer API key.
+The live HTTP 402 payment challenge on native and dual-rail REST endpoints offers two payment protocols side by side:
+
+- **x402 (`PAYMENT-REQUIRED` / JSON `accepts[]`):** **Base USDC** (`eip155:8453`, `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`) and **Solana USDC** (`solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`).
+- **MPP (`WWW-Authenticate: Payment ..., method="tempo", intent="charge"`):** **Tempo mainnet USDC.e** (`eip155:4217`, `chainId: 4217`, currency `0x20C000000000000000000000b9537d11c60E8b50`), a separate payment protocol. Base is not required when your wallet holds Tempo mainnet `USDC.e` and can answer the MPP Tempo challenge.
+- **Stripe MPP (`WWW-Authenticate: Payment ..., method="stripe", intent="charge"`, `>= $0.50` deliverables on REST):** advertised alongside Tempo on MPP-enabled REST deliverables priced at or above Stripe's `$0.50` card minimum (`locus-property-tax-protest-packet` at `$0.89`, `locus-before-you-sign-dossier` at `$1.19`, `locus-escrow-insurance-dossier` at `$0.89`, and `locus-seller-readiness-packet` at `$0.85`) when Stripe MPP is configured. Link CLI / Stripe Shared Payment Token (`spt_...`) callers can settle these bundled JSON + printable HTML/PDF packets in a single challenge while sub-`$0.50` MPP-enabled tools (`$0.01-$0.49`) offer Tempo MPP and Base/Solana x402. MPP challenges (`tempo` and `stripe`) are served on direct HTTP REST (`POST /api/<tool-slug>`); MCP paid execution uses x402 (`_meta["x402/payment"]`).
+
+AgentCash is one compatible x402 and MPP client. It creates a local payer wallet and can install its MCP server into common agent clients. Locus issues no buyer API key.
 
 ```bash
 npx agentcash@latest onboard
@@ -148,15 +156,23 @@ npx agentcash@latest discover https://api.locus.report
 npx agentcash@latest check https://api.locus.report/api/locus-flood-zone
 ```
 
-`check` returns request and response schema plus pricing before any payment. Then call it, capping the amount:
+`check` returns request and response schema plus pricing before any payment. Then call it on either **Base (x402)** or **Tempo (MPP)**, capping the amount:
 
 ```bash
+# Base USDC over x402:
 npx agentcash@latest fetch https://api.locus.report/api/locus-flood-zone \
   -m POST -p x402 --payment-network base --max-amount 0.01 \
   -b '{"address":"1 E Edenton St, Raleigh, NC 27601"}'
+
+# Tempo mainnet USDC.e over MPP (separate protocol; no Base wallet required):
+npx agentcash@latest fetch https://api.locus.report/api/locus-flood-zone \
+  -m POST -p mpp --payment-network tempo --max-amount 0.01 \
+  -b '{"address":"1 E Edenton St, Raleigh, NC 27601"}'
 ```
 
-`fetch` handles paid and SIWX routes alike and pays only when the route still demands payment. Hold the same `--payment-network` across every call in one workflow. Force x402 with `-p x402` when an endpoint advertises several rails. Full command reference: [agentcash docs](https://www.npmjs.com/package/agentcash).
+`fetch` handles paid and SIWX routes alike and pays only when the route still demands payment. Hold the same `-p` and `--payment-network` across every call in one workflow (`-p x402 --payment-network base`, `-p x402 --payment-network solana`, or `-p mpp --payment-network tempo`). Force x402 with `-p x402` or MPP with `-p mpp` when an endpoint advertises both protocols. Full command reference: [agentcash docs](https://www.npmjs.com/package/agentcash).
+
+**Wallet compatibility vs. verified settlement on Tempo:** Locus already offers the Tempo payment route over MPP (`method="tempo", intent="charge"`, requesting `USDC.e` on Tempo mainnet), so x402-on-Tempo is not required. The remaining question for any custom wallet is whether it holds Tempo mainnet `USDC.e` (`0x20C000000000000000000000b9537d11c60E8b50`) and can sign the MPP Tempo challenge; inspecting the 402 challenge is a compatibility finding, whereas a completed payment test requires a settled 200 response with `Payment-Receipt` and `charged: true`.
 
 Install the Locus skill separately with `npx @velinussage/locus-agent-skill@latest add`. Use the free Locus MCP or the `POST /api/<tool_name>` routes first.
 
@@ -165,6 +181,20 @@ Read the live challenge and ask before every payment. Keep the settlement receip
 For broad requests, start with the current bundles in the top-agent manifest. For exact lanes, use the full catalog. A paid entry has a free underscore route only when it publishes `dualFreeTool` or a free `counterparts[]` entry. Paid-only atomics do not. Free executor names use underscores (`locus_zoning`); paid REST slugs use hyphens (`locus-zoning`). Execute the entry's exact `callName`.
 
 The live catalogs are authoritative for tool names, schemas, prices, and endpoints. Do not copy stale tool definitions into prompts.
+
+### Caller-paid x402 partner handoffs (`handoffs[]`)
+
+Selected Locus free and paid responses include an optional `handoffs[]` array of caller-paid third-party x402 endpoints that complement Locus's public-record context. Every entry carries `id`, `category`, `provider`, `endpoint`, `method`, `payment: { protocol: "x402", priceUsd, priceNote }`, `prefilledInput`, `whenToUse`, `verified`, and `disclaimer: "Locus does not call or pay this partner; prices and availability may change."`
+
+- **State homeowners-insurance market data (`insurance_market.querylines`, `$0.10` x402 on Base):** attached to `locus_insurance_nonrenewal_pointers`, `locus_homeowners_insurance_context`, `locus-insurance-context`, and `locus-escrow-insurance-dossier` whenever a 2-letter state resolves.
+  - **Default prefilled route:** `GET https://api.querylines.com/v1/carriers?state=<ST>&line=homeowners` (`$0.10` USDC on `eip155:8453`), returning NAIC state market share, Direct Premiums Written (DPW) YoY change, and direct loss ratio for the top 10 homeowners carriers in that state.
+  - **Companion QueryLines routes (same origin `https://api.querylines.com`, read `https://querylines.com/llms.txt`):** `GET /v1/rates/activity?states=<ST>&line=homeowners&granularity=year` (`$0.10` SERFF rate filing counts, average requested vs. approved rate change, and approval disposition), `GET /v1/solvency?state=<ST>` (`$0.15` carrier RBC and leverage ratios), and `GET /v1/citizens/pif` (`$0.10` Florida Citizens policies-in-force exposure trend).
+  - **Boundary:** State-level regulatory market context only. Never treat carrier market share, loss ratios, or SERFF filing activity as a policy quote, a carrier recommendation, or a reason this specific parcel was nonrenewed.
+- **Nearby trade-contractor directory lookup (`trade_contractors.locationlists`, `$0.02` x402 on Base):** attached to `locus_mitigation_incentives`, `locus_permit_rules`, `locus-permit-closeout-check`, `locus-renovation-site-context`, and `locus-seller-readiness-packet` when coordinates or a 5-digit ZIP resolve.
+  - **Prefilled route:** `POST https://locationlists.com/api/x402/query` (`$0.02` USDC on `eip155:8453` for `limit: 1..25`, `$0.001/record` above 25) with `prefilledInput` set to `{ "dataset": "roofing-contractor-list", "near": { "lat": <lat>, "lng": <lng>, "radius_miles": 10 }, "limit": 2 }` (or `"near": { "zip": "<ZIP5>", "radius_miles": 10 }`). Also accepts `"hvac-installer-list"` and `"solar-installer-list"`, or `"near": { "place": "City, ST", "radius_miles": 10 }`.
+  - **Client call notes:** Call `POST https://locationlists.com/api/x402/query` directly with `npx agentcash@latest fetch https://locationlists.com/api/x402/query -m POST -p x402 --payment-network base --max-amount 0.05 -b '...'`. Do **not** run `agentcash check` on LocationLists (its `/openapi.json` has an unresolved `#/components/schemas/ErrorResponse` `$ref`), and do **not** use its free `GET /api/x402/locations/find` preview (which returns unfiltered nationwide rows when `state` is omitted).
+  - **Two-step contractor verification rule:** LocationLists returns manufacturer-certified commercial directory listings (`id: "oc:..."`, business name, address, phone, website, rating, and distance), **not** state government licensing records. Always verify state contractor licensure, bond, and disciplinary status next using Locus's free `locus_contractor_license_check` (where wired, e.g., WA L&I) or the state contractor licensing board before hiring. Never pass contractor names, phone numbers, or person fields from a partner response back into Locus tools.
+- **Other domain handoffs:** `skip_trace.batchdata` and `skip_trace.Trestle` (on `locus_tax_distress` / `locus-tax-liens`), `title_chain.FirstAmerican` (on `locus_parcel_transfers`), `environmental_phase1.EDR` (on `locus_cleanup_sites` / `locus-environmental-context`), `appraisal.HouseCanary` (on `locus-comps-brief` / `locus-valuation-challenge`), and `legal_review.RocketLawyer` (on `locus-before-you-sign` / `locus-local-policy-brief`). Always present any handoff as an optional caller-paid next step and ask for explicit user approval before spending.
 
 ## Surrounding-area orchestration route
 
@@ -416,6 +446,10 @@ Dual-rail routes (a paid `/api/locus-<tool>` with a free `locus_<tool>` counterp
 | `POST /api/locus-landslide-diligence` | `$0.05` | Agent needs separate USGS documented inventory history and exact source-native n10 model-cell evidence. | Unless both components answer, returns `charged:false`. Never a probability, parcel stability finding, engineering assessment, or safety label. |
 | `POST /api/locus-permit-closeout-check` | `$0.05` | Agent needs exact-subject permit status plus source-published closeout or occupancy-document evidence. Registry coverage: Raleigh, unincorporated Wake County, Durham, Austin, Seattle, Chicago, Los Angeles, and New York City. It accepts an address or up to 25 jurisdiction-scoped `parcelIds`. The coverage label is generated from the source registry. | Uncovered, uncertain, unavailable, unpublished, and no-exact-match states are charge-suppressed. Not condition, compliance, suite/use permission, or closing approval. |
 | `POST /api/locus-transaction-follow-up` | `$0.10` | Agent needs one explicit homebuyer, land-investor, developer-predevelopment, commercial-tenant, or renovation-planning packet with cited handoffs. Prefer the dedicated `locus-renovation-site-context` route for renovation work because it fixes the profile server-side. | Profile-specific component/group thresholds control chargeability. Assessor totals never establish above-grade or finished-basement area. The result is not a feasibility, condition, drainage-design, permit-requirement, cost, or valuation conclusion. Thin evidence is charge-free. |
+| `POST /api/locus-property-tax-protest-packet` | `$0.89` | Homeowner or representative contesting a property-tax assessment needs one shareable evidence packet (cited JSON + self-contained printable HTML/PDF) bundling same-roll assessment uniformity (`locus-assessment-position`), recorded comparable sales (`locus-comps-brief`), optional proposed-figure protest comparison (`locus-valuation-challenge`), statutory appeal deadline rules, and filing portal pointers. Eligible for Stripe MPP (`method="stripe"`), Tempo MPP (`method="tempo"`), and Base/Solana x402. | Fewer than two resolved constituent lanes return `charged:false`. Descriptive percentile and recorded sales only; never an over-assessment verdict or legal/tax advice. |
+| `POST /api/locus-before-you-sign-dossier` | `$1.19` | Homebuyer or buyer's agent under contract needs one complete pre-signing dossier (cited JSON + self-contained printable HTML/PDF) bundling subject parcel identity and roll value, the immediate surrounding parcel ring, FEMA flood zone and mandatory-purchase rule, EPA TRI/RCRA/SDWIS environmental proximity, recorded comparable sales, and local legislative context. Eligible for Stripe MPP (`method="stripe"`), Tempo MPP (`method="tempo"`), and Base/Solana x402. | Fewer than two resolved constituent lanes return `charged:false`. Never an inspection, appraisal, title opinion, or purchase recommendation. |
+| `POST /api/locus-escrow-insurance-dossier` | `$0.89` | Homeowner facing an escrow payment jump or homeowners insurance nonrenewal needs one two-track action dossier (cited JSON + self-contained printable HTML/PDF) bundling `locus-owner-action-brief` (exemptions, tax calendar, appeal window, LOMA screen), `locus-assessment-position`, `locus-insurance-context` (FEMA flood rule, NFIP/ACS figures, rebuild proxy), state nonrenewal notice and FAIR Plan pointers, and federal RESPA 12-month shortage rules. Eligible for Stripe MPP (`method="stripe"`), Tempo MPP (`method="tempo"`), and Base/Solana x402. | Fewer than two resolved constituent lanes return `charged:false`. Never an insurance quote, servicer error finding, or legal/financial advice. |
+| `POST /api/locus-seller-readiness-packet` | `$0.85` | Seller or listing agent preparing to list needs one pre-listing verification and permit closeout packet (cited JSON + self-contained printable HTML/PDF) bundling `locus-permit-closeout-check`, municipal permit portal rules, county assessor roll baseline, state seller property disclosure statute pointers, municipal code cases, FEMA flood-map revision notices, and special district levies. Eligible for Stripe MPP (`method="stripe"`), Tempo MPP (`method="tempo"`), and Base/Solana x402. | Fewer than two resolved constituent lanes return `charged:false`. Never a compliance certificate, legal disclosure opinion, or inspection substitute. |
 
 ### Report compose: turn results you already have into one cited comparison
 
@@ -513,7 +547,7 @@ These work for geocodable US addresses at no cost. Some accept address directly.
 | Toxic releases | `locus_toxic_releases` | `{ "state": "MT", "county": "Park County" }` | EPA TRI facilities for the county, chemical-release reporting fields where available, profile links. |
 | RCRA hazardous-waste handlers | `locus_rcra_handlers` | `{ "state": "MT", "countyFips3": "067" }` or `{ "state": "MT", "zip": "59047" }` | RCRAInfo handlers, generator status/activity fields, coordinates, ECHO verify links. |
 | EPA radon zone | `locus_radon_zone` | `{ "address": "..." }` or `{ "state": "MT", "county": "Park County" }` | EPA county radon zone 1/2/3, county basis, testing/disclosure caveat, provenance. |
-| California service-line material | `locus_service_line_material` | `{ "address": "<complete CA street address, unit if applicable, city, state and ZIP>" }` | Utility-reported system-owned and customer-owned materials separately. Opt-in snapshot; exact or normalized address only. Unknown stays unknown; no match is not non-lead. Verify current materials and ownership boundaries with the utility. |
+| California service-line material | `locus_service_line_material` | `{ "address": "<complete CA street address, unit if applicable, city, state and ZIP>" }` | Utility-reported system-owned and customer-owned materials separately (~34% of published statewide rows carry complete indexable street addresses; systems with unindexable or excluded location rows return `source_unavailable` on a miss rather than a negative finding). Opt-in snapshot; exact or normalized address only. Unknown stays unknown; no match is not non-lead. Verify current materials and ownership boundaries with the utility. |
 | Public water systems | `locus_water_systems` | `{ "state": "MT", "county": "Park County" }` | Active public water systems, PWSIDs, SDWIS/ECHO links, and dated system-wide lead, galvanized-requiring-replacement, unknown, and non-lead service-line counts when reported; missing counts are not zero and non-lead counts may be underreported until November 1, 2027. County membership does not prove which system serves an address; system counts do not identify the caller's own line. |
 | State boil-water notices | `locus_boil_water_notices` | `{ "pwsid": "MO1010001" }` or `{ "address": "..." }` | State-published active orders where wired; check live coverage. Address input uses candidate service-area boundaries, not county association. Precautionary utility advisories may be excluded. Use `poll_events` or `subscribe_event` with `name: "locus.real_estate.changes_detected"`, `arguments.addresses`, and `arguments.lanes: ["locus_boil_water_notices"]` to watch for new published notices after a quiet complete baseline. Unavailable reads keep the prior notice watermark. A disappearing row never means lifted; confirm address impact and current instructions with the utility. Not an emergency notification service. |
 | Groundwater monitoring-well context | `locus_groundwater_context` | `{ "address": "...", "radiusMeters": 5000 }` | Nearby USGS monitoring locations, aquifer codes/names, well-construction depth distributions, and static water-level observations, returned in distance bands without location names or exact coordinates. Not a domestic-well depth, yield, potability, contamination, or cost prediction. |
@@ -886,7 +920,7 @@ Both MCP harnesses (via protocol JSON-RPC `events/list`, `events/poll`, `events/
 | `locus.real_estate.insurance_renewal_approaching` | `{ "address": "...", "renewalMonth": 7 }` | Opt-in window opens 45 days before the supplied month's first day. Free insurance-context and mitigation `nextActions`. The month boundary is not an actual policy renewal date. |
 | `locus.real_estate.escrow_analysis_approaching` | `{ "address": "...", "escrowAnalysisMonth": 7 }` | Opt-in window opens 30 days before the supplied month's first day. Free mortgage-calendar fact cards, tax-calendar and insurance-context `nextActions`. The month boundary is not a verified servicer date. |
 
-Calendar reminders require the provider's `LOCUS_MCP_CALENDAR_EVENTS_ENABLED` flag. Unknown months create no date and return `calendarStatus: "missing_date"`. Caller months are explicitly `caller_supplied`, with no invented source URL. Their `nextActions` are free (`priceUsdc: "0.00"`, `charge: "free"`), with no payment field. Poll at least every 12 hours. The existing cursor TTL is 24 hours: a stale cursor establishes a silent truncated baseline. To recover, omit that cursor and deduplicate by stable `eventId`. Fresh polls list only windows from `triggerDate` through `date`, inclusive in UTC, with no closed-window backfill. Subscribe before the trigger window and renew the subscription before expiry. Existing `deadline_approaching` events already resurface explicit exemption and appeal dates; never roll recurring prose or a prior-cycle date into a new year.
+Calendar reminders require the provider's `LOCUS_MCP_CALENDAR_EVENTS_ENABLED` flag. Unknown months create no date and return `calendarStatus: "missing_date"`. Caller months are explicitly `caller_supplied`, with no invented source URL. Their `nextActions` are free (`priceUsdc: "0.00"`, `charge: "free"`), with no payment field. Cursors expire after 24 hours; when the user has asked for recurring checks, a 12-hour interval supports continuity without losing the baseline. A stale cursor establishes a silent truncated baseline; to recover, omit that cursor and deduplicate by stable `eventId`. Fresh polls list only windows from `triggerDate` through `date`, inclusive in UTC, with no closed-window backfill. If the user opts into a webhook subscription, creating it before the trigger window opens and renewing before `refreshBefore` avoids a gap. Existing `deadline_approaching` events already resurface explicit exemption and appeal dates; never roll recurring prose or a prior-cycle date into a new year. To test event polling, deduplication, or webhook delivery without waiting for a real public-record filing, pass `cursor: "cur_synthetic_test_fixture"` to `events/poll`, `poll_events`, `events/subscribe`, or `subscribe_event`; it emits one clearly labeled synthetic event (`eventId` prefixed `evt_synthetic_`, `synthetic: true` on the poll result) and returns a real cursor. Keep synthetic fixture results separate from proof that a real source change was detected.
 
 1. **Discover event schemas first:** Call JSON-RPC `events/list` (or model tool `list_event_types` on `/muse/mcp`, or free `locus_mcp_events_catalog` with `{}` on `/mcp` or REST `/tools/call`) and read each event's strict `inputSchema`, `payloadSchema` (defined `properties` and `required` fields for every listed event; five kinds by default, eight where calendar reminders are enabled), `delivery`, and `requiresAuthForPoll`.
 2. **Poll an address set or pool (`events/poll` or `poll_events`):**
@@ -989,7 +1023,7 @@ changes what a call is allowed to do.
 
 The paid catalog includes native products, promoted free duals, and paid-only atomics. Native tools use the transports listed in their catalogs. Paid-only atomics are REST-only.
 
-1. **REST:** call `POST /api/<tool-slug>`. Read the x402 v2 `PaymentRequired` body from HTTP 402. Retry the identical request with `PAYMENT-SIGNATURE`. Read settlement from `PAYMENT-RESPONSE`. Legacy `X-PAYMENT` and `X-PAYMENT-RESPONSE` remain compatibility aliases.
+1. **REST (x402 or MPP / Tempo):** call `POST /api/<tool-slug>`. An unpaid call returns HTTP 402 with the x402 v2 `PaymentRequired` JSON body (`accepts[]` offers Base USDC and Solana USDC) and, on MPP-enabled native and dual-rail routes, a `WWW-Authenticate: Payment ..., method="tempo", intent="charge"` header requesting `USDC.e` (`0x20C000000000000000000000b9537d11c60E8b50`) on Tempo mainnet (`eip155:4217`, `chainId: 4217`). For x402, retry the identical request with `PAYMENT-SIGNATURE` and read settlement from `PAYMENT-RESPONSE` (legacy `X-PAYMENT` and `X-PAYMENT-RESPONSE` remain compatibility aliases). For MPP / Tempo, retry the identical request with `Authorization: Payment <credential>` and read the receipt from `Payment-Receipt`. Never send both payment headers on the same request.
 2. **MCP:** use only paid entries present in the MCP catalog. Call `locus_execute`, then retry with `_meta["x402/payment"]` when challenged.
 3. **A2A:** activate `https://github.com/google-a2a/a2a-x402/v0.1` in `X-A2A-Extensions`. A covered paid call returns a task in `input-required` state with `x402.payment.required`. Retry with the same `taskId` and `contextId` and put only `x402.payment.payload` in message metadata; Locus reuses the server-bound tool and arguments. If the completion response is lost, repeat the same payment-only message during the task's short recovery window. The settled replay returns the stored canonical artifact and may refresh the ephemeral owner-of-record field for the same exact verified parcel without another settlement. If you repeat the tool call, it must match that binding. Read settlement from `x402.payment.receipts` in the completed task.
 4. On every rail, read `amount`, `network`, `asset`, and `payTo` from the live challenge. Ask before signing. Payment is idempotent on the tool plus a canonical argument hash, so replay does not double-charge.
@@ -1027,6 +1061,53 @@ Serialize authorization integers as decimal strings. Do not add top-level `resou
 
 An `insufficient_funds` 402 includes `payer`, `network`, and `amountRequired` (atomic USDC units). Before topping up, confirm the funding human holds a recovery copy, especially for an ephemeral agent environment. Then fund that wallet on that network and retry using the fresh challenge. `invalid_signature` and `expired_authorization` require a new signature. A malformed envelope remains `invalid_payload`. None of these responses is a settlement receipt.
 
+### Minimal Tempo MPP (USDC.e) setup
+
+Native and promoted dual-rail REST endpoints also advertise Tempo on HTTP 402 via MPP (`WWW-Authenticate: Payment ..., method="tempo", intent="charge"`), a separate payment protocol from x402. You do not need Base USDC or x402-on-Tempo to use this route; you need a wallet that holds **USDC.e** (`0x20C000000000000000000000b9537d11c60E8b50`) on **Tempo mainnet** (`eip155:4217`, `chainId: 4217`) and can answer the MPP Tempo challenge.
+
+A live `WWW-Authenticate` header on HTTP 402 starts with:
+
+```text
+WWW-Authenticate: Payment id="...", realm="api.locus.report", method="tempo", intent="charge", request="<base64url>", description="...", expires="...", opaque="<base64url>"
+```
+
+Decoding the `request` base64url payload shows the exact Tempo offer (illustrative; always read the live challenge):
+
+```json
+{
+  "amount": "10000",
+  "currency": "0x20C000000000000000000000b9537d11c60E8b50",
+  "externalId": "locus-flood-zone",
+  "methodDetails": { "chainId": 4217 },
+  "recipient": "0xF121fbeceC43e1B616D47285851c20d5fC64431b"
+}
+```
+
+After explicit user spending approval, answer the challenge with an MPP-compatible Tempo client (such as `mppx/client` or `npx agentcash@latest fetch ... -p mpp --payment-network tempo`), which retries the identical `POST` with `Authorization: Payment <credential>` and receives a `Payment-Receipt` header on HTTP 200:
+
+```js
+import { Mppx, tempo } from "mppx/client";
+import { privateKeyToAccount } from "viem/accounts";
+
+// Requires a wallet holding USDC.e (0x20C000000000000000000000b9537d11c60E8b50) on Tempo mainnet (chainId 4217)
+// that can sign the MPP tempo/charge challenge.
+const mppx = Mppx.create({
+  polyfill: false,
+  methods: [tempo.charge({ account: privateKeyToAccount(process.env.TEMPO_PRIVATE_KEY) })],
+});
+
+const response = await mppx.fetch("https://api.locus.report/api/locus-flood-zone", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ address: "1 E Edenton St, Raleigh, NC 27601" }),
+});
+const receipt = response.headers.get("Payment-Receipt");
+const result = await response.json();
+// Confirm response.status === 200, Boolean(receipt), and result.charged === true.
+```
+
+Do not send both `Authorization: Payment` and `PAYMENT-SIGNATURE` on the same request. Lifecycle-bound async jobs (`locus-place-report-batch`, `locus-property-update`, `locus-property-flyer`), paid-only atomics, and `locus-permit-closeout-check` when recheck snapshots are enabled omit the Tempo `WWW-Authenticate` challenge and accept x402 only. Observing the MPP Tempo challenge on a 402 probe is a protocol and asset compatibility finding, not a completed payment test; verify your wallet can sign and settle a `$0.01` call before relying on it in automation.
+
 ### Probe the challenge without paying
 
 `GET` on any paid endpoint returns a side-effect-free discovery challenge. Do not sign that challenge for a Turnkey-backed workflow because it has no exact request body and reserves no provider capacity. Send the exact `POST` body without payment first. That charge-free preflight either returns a current 402 or an uncharged availability error.
@@ -1043,7 +1124,7 @@ For RentCast workflows, inspect `X-Locus-Provider-Budget-State` and `X-Locus-Pro
 
 A 402 challenge alone is not proof that end-to-end paid settlement works for your client. Before relying on paid Locus calls in automation, validate the full pay-and-retry loop once with a $0.01 promoted lookup such as `locus-parcel-lookup` or `locus-flood-zone`:
 
-1. `POST https://api.locus.report/api/locus-flood-zone` with a real address, satisfy the $0.01 challenge, and confirm a 200 with a `PAYMENT-RESPONSE` header (or the legacy `X-PAYMENT-RESPONSE` compatibility header).
+1. `POST https://api.locus.report/api/locus-flood-zone` with a real address, satisfy the $0.01 challenge on your chosen rail (x402 `PAYMENT-SIGNATURE` on Base/Solana or MPP `Authorization: Payment` on Tempo mainnet `USDC.e`), and confirm a 200 with `charged: true` and a `PAYMENT-RESPONSE` header (x402) or `Payment-Receipt` header (MPP / Tempo).
 2. Keep the payment challenge and settlement receipt. Keep signed `offer-receipt` evidence when present. The current EIP-712 receipt extension is EVM-only, so a Solana settlement may omit that additive extension while still returning the standard `PAYMENT-RESPONSE` transaction receipt.
 3. Only then move to higher-priced tools. Read the live challenge instead of relying on a copied price range.
 
@@ -1100,16 +1181,14 @@ Redirect these asks back to records plus verification questions:
 
 ## How to speak with owners, sellers and buyers
 
-Money, home and deadline questions are stressful. These rules apply to every owner, seller and buyer answer and to every Locus workflow skill:
+Money, home and deadline questions are stressful. Keep presentation grounded in available evidence across every owner, seller and buyer answer and every Locus workflow skill:
 
-- **Pair every risk with a step and a date.** A flood zone, shortage or deadline comes with what the person can do and by when.
-- **No alarm words or fear imagery.** State the fact, its date and its source.
-- **Say what is known, what is unknown, and when the unknown will be known** (for example, the date a notice, bill or hearing result is due).
-- **Surface items early.** Raise a window or deadline when it opens, not on its last day.
-- **Offer choices, never verdicts.** "You can appeal, apply for the exemption, or ask the servicer how a shortage can be repaid", not "you should appeal".
-- **Give a concrete next step,** such as a pre-filled `nextActions` call, a filing guide or an official contact, not just a reminder.
-- **Route to human help without shame.** "Payment trouble is common, and HUD-approved housing counselors are free or low-cost."
-- **Re-surface risk on a calendar,** for example flood context before hurricane season or an insurance check in the renewal month.
+- **Fact, source, uncertainty, useful next step.** State what the record shows, cite the source and its date or vintage when returned, name what the record leaves open, and give a concrete next step when one helps.
+- **Do not require a date for every risk or promise when an unknown will clear.** Include a deadline or window when a statute, notice, or published schedule actually supports one. Sometimes no supported date exists; when a date is unknown or unverified, say so rather than inventing a timeline.
+- **Let completeness and stop conditions guide the next step.** `"This address isn't indexed"` (`source_unavailable` with `incomplete_source_rows` on `locus_service_line_material`) leads to asking the utility for its inventory entry rather than reporting a clean result, whereas `"the indexed record says non-lead"` reports the utility's classification as of the snapshot date. An unverified state rule (`not_verified`) stops at the official portal rather than implying no rule exists.
+- **Treat `nextActions` and paid tools as offers, never instructions to spend or contact someone.** Present the exact tool, arguments, free-versus-paid tier, price (`priceUsdc`), and what question the call answers so the user decides whether to run it.
+- **No alarm words, fear imagery, or verdicts.** Offer choices supported by the records ("You can appeal, apply for the exemption, or ask the servicer how a shortage can be repaid") rather than telling the user what they must do.
+- **Route to human help without shame when relevant.** When payment trouble comes up, note that payment trouble is common and that agencies listed in HUD's housing counseling directory can be asked about free or low-cost counseling.
 - **Crisis guard:** if a person says they are thinking of harming themselves or are in crisis, stop the records task and give the 988 Suicide and Crisis Lifeline (call or text 988). Locus is not a mental-health service.
 
 ## Failure handling
