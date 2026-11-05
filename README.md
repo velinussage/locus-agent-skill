@@ -2,7 +2,7 @@
 
 [![skills.sh](https://skills.sh/b/velinussage/locus-agent-skill)](https://skills.sh/velinussage/locus-agent-skill)
 
-Install eight Locus agent skills: the general MCP/REST/A2A capability guide, the opt-in surrounding-area purchase workflow, the property-tax protest workflow, home-watch, water-incident, seller-readiness, escrow-shock, and payment-hardship workflows.
+Install twelve Locus agent skills: the general MCP/REST/A2A capability guide, the media-to-market photo/video regional triangulation workflow, the opt-in surrounding-area purchase workflow, the property-tax protest workflow, home-watch, water-incident, seller-readiness, escrow-shock, payment-hardship, insurance-nonrenewal, inherited-home, and aging-owner workflows.
 
 Locus returns awareness and verification steps, not a verdict. Do not use it to score, rank, screen, value, predict, or label a person, property, block, or neighborhood as safe or unsafe.
 
@@ -12,7 +12,7 @@ Locus returns awareness and verification steps, not a verdict. Do not use it to 
 npx @velinussage/locus-agent-skill add
 ```
 
-By default this writes `locus-agent-tools/`, `locus-surrounding-area-analysis/`, `locus-property-tax-protest/`, `locus-home-watch/`, `locus-water-incident/`, `locus-seller-readiness/`, `locus-escrow-shock/`, `locus-payment-hardship/`, `locus-insurance-nonrenewal/`, `locus-inherited-home/` and `locus-aging-owner/` to `$CODEX_HOME/skills` or `~/.codex/skills`. The general public skill routes relevant requests to the specialist workflows; it does not turn ordinary Locus discovery into a paid flow.
+By default this writes `locus-agent-tools/`, `locus-media-to-market/`, `locus-surrounding-area-analysis/`, `locus-property-tax-protest/`, `locus-home-watch/`, `locus-water-incident/`, `locus-seller-readiness/`, `locus-escrow-shock/`, `locus-payment-hardship/`, `locus-insurance-nonrenewal/`, `locus-inherited-home/` and `locus-aging-owner/` to `$CODEX_HOME/skills` or `~/.codex/skills`. The general public skill routes relevant requests to the specialist workflows; it does not turn ordinary Locus discovery into a paid flow.
 
 Options:
 
@@ -67,6 +67,7 @@ npx skills use velinussage/locus-agent-skill --skill locus-agent-tools
 
 - Read the live free catalog for current tools and national lanes; rollout configuration can change the visible total.
 - `locus_place_facts` is the best first call when supported.
+- When you have only 1–5 photos or a short video clip and no street address yet, start with `locus_media_upload_init` and `locus_media_locate` (free EXIF/text check) or `locus-media-locate` ($0.05) / `locus-video-locate` ($0.10) / `locus-media-to-market` ($0.15) / `locus-video-to-market` ($0.25) to triangulate the region and follow its pre-populated `nextTools` (`livingThere`, `buyingThere`, `whatChangedNearby`).
 - `locus_lane_availability` shows national, local, varies, not-covered, and degraded lanes before payment.
 - Free tools stay read-only and cited.
 - The payment-hardship workflow routes mortgage trouble to HUD counseling agencies first, then official state foreclosure pointers and servicer fact cards; the tax branch checks payment status, calendars and relief-program pointers without an eligibility decision.
