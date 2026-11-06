@@ -2,7 +2,7 @@
 
 [![skills.sh](https://skills.sh/b/velinussage/locus-agent-skill)](https://skills.sh/velinussage/locus-agent-skill)
 
-Install twelve Locus agent skills: the general MCP/REST/A2A capability guide, the media-to-market photo/video regional triangulation workflow, the opt-in surrounding-area purchase workflow, the property-tax protest workflow, home-watch, water-incident, seller-readiness, escrow-shock, payment-hardship, insurance-nonrenewal, inherited-home, and aging-owner workflows.
+Install thirteen Locus agent skills: the general MCP/REST/A2A capability guide, the media-to-market photo/video regional triangulation workflow, the opt-in surrounding-area purchase workflow, the property-tax protest workflow, the land-entitlement and LiDAR drainage workflow, home-watch, water-incident, seller-readiness, escrow-shock, payment-hardship, insurance-nonrenewal, inherited-home, and aging-owner workflows.
 
 Locus returns awareness and verification steps, not a verdict. Do not use it to score, rank, screen, value, predict, or label a person, property, block, or neighborhood as safe or unsafe.
 
@@ -12,7 +12,7 @@ Locus returns awareness and verification steps, not a verdict. Do not use it to 
 npx @velinussage/locus-agent-skill add
 ```
 
-By default this writes `locus-agent-tools/`, `locus-media-to-market/`, `locus-surrounding-area-analysis/`, `locus-property-tax-protest/`, `locus-home-watch/`, `locus-water-incident/`, `locus-seller-readiness/`, `locus-escrow-shock/`, `locus-payment-hardship/`, `locus-insurance-nonrenewal/`, `locus-inherited-home/` and `locus-aging-owner/` to `$CODEX_HOME/skills` or `~/.codex/skills`. The general public skill routes relevant requests to the specialist workflows; it does not turn ordinary Locus discovery into a paid flow.
+By default this writes `locus-agent-tools/`, `locus-media-to-market/`, `locus-surrounding-area-analysis/`, `locus-property-tax-protest/`, `locus-land-entitlement/`, `locus-home-watch/`, `locus-water-incident/`, `locus-seller-readiness/`, `locus-escrow-shock/`, `locus-payment-hardship/`, `locus-insurance-nonrenewal/`, `locus-inherited-home/` and `locus-aging-owner/` to `$CODEX_HOME/skills` or `~/.codex/skills`. The general public skill routes relevant requests to the specialist workflows; it does not turn ordinary Locus discovery into a paid flow.
 
 Options:
 
