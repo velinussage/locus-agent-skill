@@ -112,7 +112,7 @@ The live paid index is authoritative: <https://api.locus.report/.well-known/ai-t
 | `POST /api/locus-surface-heat` | `$0.05` | Up to four recent clear summer Landsat land surface temperature readings, each cited to its scene. Ground surface, not air temperature. |
 | `POST /api/locus-surface-heat-history` | `$0.25` | Summer land surface temperature by year since 2013, with scene IDs and the first-to-last change. |
 | `POST /api/locus-field-water-use` | `$0.99` | OpenET satellite evapotranspiration by month and year for the last ten years, for farmland and rural-land diligence. An estimate, not a metered withdrawal. |
-| Six paid-only atomic REST routes | `$0.01` each | Workplace jobs, Wikipedia, Commons metadata, PFAS, NEI, and electricity. No free, MCP, or A2A counterpart. |
+| Seven paid-only atomic REST routes | `$0.01` each | Workplace jobs, Wikipedia, Commons metadata, PFAS, NEI, electricity, and observed regulatory activity baselines (40 discrete city/county jurisdictions). No free, MCP, or A2A counterpart. |
 | `locus-evaluation-packet` paid-only atomic | `$0.35` | Lender evaluation-support packet. No free, MCP, or A2A counterpart. |
 
 Unsupported, discovery-only, commercial, or insufficient-data cases return free diagnostics instead of charging where applicable. The surface heat, heat history, and field water use routes are not charged when no clear reading or no data is found.
